@@ -8,11 +8,11 @@ type Repos = typeof repos;
 const REVIEWERS = ['Daniel R.', 'Sara K.', 'Marcus T.', 'Lena M.', 'Omid A.', 'Julia W.'];
 
 const COMMENTS: [number, string][] = [
-  [5, 'Broke in within a week and they look better every month. Better than pairs costing twice as much.'],
-  [5, 'The stitching and the leather are flawless. Comfortable right out of the box.'],
-  [4, 'Great quality. Runs a little big, so I went half a size down as suggested.'],
-  [5, 'My go-to pair for work and weekends. Gets compliments every time.'],
-  [4, 'Beautiful leather and solid build. Took a few days to soften up.'],
+  [5, 'Plenty of power for the size. Drives long screws into hardwood without bogging down.'],
+  [5, 'Solid build and the battery lasts a full day of light work. Would buy again.'],
+  [4, 'Great tool for the price. A little heavy after an hour overhead, but nothing to complain about.'],
+  [5, 'Does exactly what the spec sheet says. Delivered from the Berlin warehouse the next day.'],
+  [4, 'Well made and easy to use. The case could be a bit smaller.'],
 ];
 
 /** Demo reviews for the featured products (only when there are no reviews yet). */

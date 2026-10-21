@@ -5,14 +5,27 @@ import { presentProduct, presentProducts } from '../presenters/product.presenter
 import type { ProductListFilter } from '../../domain/product.entity';
 
 // Query values were parsed by the zod schemas in validate(); see products.validation.ts.
+// `spec.<key>` parameters are split off: the service turns them into typed filters.
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const result = await productService.list(req.query as unknown as ProductListFilter);
+  const specs: Record<string, string> = {};
+  const fixed: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(req.query)) {
+    if (key.startsWith('spec.')) specs[key] = String(value);
+    else fixed[key] = value;
+  }
+  const result = await productService.list(fixed as unknown as ProductListFilter, specs);
   res.json({ ...result, data: presentProducts(result.data) });
 });
 
 export const facets = asyncHandler(async (req: Request, res: Response) => {
-  const data = await productService.facets(req.query as Pick<ProductListFilter, 'category' | 'gender'>);
+  const data = await productService.facets(req.query as { category?: string });
   res.json({ data });
+});
+
+export const compare = asyncHandler(async (req: Request, res: Response) => {
+  const { slugs } = req.query as unknown as { slugs: string[] };
+  const result = await productService.compare(slugs);
+  res.json({ data: { ...result, products: presentProducts(result.products) } });
 });
 
 export const listFeatured = asyncHandler(async (_req: Request, res: Response) => {
@@ -28,11 +41,6 @@ export const getById = asyncHandler(async (req: Request, res: Response) => {
 export const getBySlug = asyncHandler(async (req: Request, res: Response) => {
   const product = await productService.getBySlug(String(req.params.slug));
   res.json({ data: presentProduct(product) });
-});
-
-export const colors = asyncHandler(async (req: Request, res: Response) => {
-  const data = await productService.colors(String(req.params.slug));
-  res.json({ data: presentProducts(data) });
 });
 
 export const create = asyncHandler(async (req: Request, res: Response) => {

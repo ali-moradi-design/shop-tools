@@ -12,16 +12,12 @@ import { prisma } from '../../src/shared/infra/prisma/client';
 
 const input = (slug: string, sku: string, stock: number) => ({
   slug,
-  title: `${slug} | Black`,
-  name: slug,
-  style: slug,
-  color: 'Black',
-  colorFamily: 'Black',
-  category: 'boots' as const,
-  gender: 'men' as const,
+  title: `${slug} drill`,
+  brand: 'TESTCO',
+  category: 'drills',
   description: 'MySQL behaviour test',
   price: 1000,
-  variants: [{ sku, size: '10', stock }],
+  variants: [{ sku, label: 'Standard', stock: { BER: stock } }],
 });
 
 describe('MySQL behaviours', () => {
@@ -73,6 +69,7 @@ describe('MySQL behaviours', () => {
     const after = await repos.products.findById(product.id);
     expect(after?.stock).toBe(0);
     expect(after?.variants[0].stock).toBe(0);
+    expect(after?.warehouses.every((w) => w.quantity === 0)).toBe(true);
   });
 
   it('rolls the whole payment back when one line is out of stock', async () => {

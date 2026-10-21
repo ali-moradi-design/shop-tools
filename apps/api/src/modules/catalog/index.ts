@@ -1,16 +1,20 @@
 export { registerCatalogRoutes } from './http/registerRoutes';
-export { productRepo, productService } from './infra/wiring';
+export { productRepo, productService, categoryRepo, warehouseRepo, categoryService } from './infra/wiring';
 export type {
   Product,
   ProductVariant,
-  ProductCategory,
-  ProductGender,
   CreateProductInput,
+  VariantInput,
   UpdateProductInput,
   ProductListFilter,
-} from './domain/product.entity';
-export { PRODUCT_CATEGORIES, PRODUCT_GENDERS } from './domain/product.entity';
-export type { IProductRepository } from './domain/product.repository';
+  WarehouseStock,
+  StockAllocation,
+  SpecDefinition,
+  Category,
+  Warehouse,
+} from './domain';
+export { unitPrice, findUnit, unitsOf } from './domain';
+export type { IProductRepository, ICategoryRepository, IWarehouseRepository } from './domain';
 export {
   assertPositiveQuantity,
   assertSufficientStock,
@@ -19,4 +23,5 @@ export {
   DEFAULT_LOW_STOCK_THRESHOLD,
 } from './domain/rules/stock';
 export { productsPaths } from './http/docs/products.paths';
+export { categoriesPaths } from './http/docs/categories.paths';
 export { uploadsPaths } from './http/docs/uploads.paths';

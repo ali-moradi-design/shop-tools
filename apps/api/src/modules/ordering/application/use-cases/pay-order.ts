@@ -35,7 +35,7 @@ export class PayOrderUseCase {
 
     // With a unit of work, stock changes and the paid order commit (or roll back) together.
     // Without one (unit tests with in-memory fakes) a failure must be undone by hand.
-    const decremented: { productId: string; sku: string; quantity: number }[] = [];
+    const taken: { product: string; sku: string; warehouse: string; quantity: number }[] = [];
     const run = this.uow
       ? <T>(fn: () => Promise<T>) => this.uow!.runInTransaction(async () => fn())
       : <T>(fn: () => Promise<T>) => fn();
@@ -43,14 +43,16 @@ export class PayOrderUseCase {
     try {
       const saved = await run(async () => {
         for (const item of order.items) {
-          const ok = await this.products.decrementStock(item.product, item.sku, item.quantity);
-          if (!ok) {
+          const allocations = await this.products.decrementStock(item.product, item.sku, item.quantity);
+          if (!allocations) {
             throw new DomainError(
               `Insufficient stock for product ${item.title}`,
               'INSUFFICIENT_STOCK',
             );
           }
-          decremented.push({ productId: item.product, sku: item.sku, quantity: item.quantity });
+          for (const a of allocations) {
+            taken.push({ product: item.product, sku: item.sku, warehouse: a.warehouse, quantity: a.quantity });
+          }
         }
 
         order.status = 'paid';
@@ -65,7 +67,10 @@ export class PayOrderUseCase {
           at: new Date(),
           note: 'Fake payment confirmed',
         });
-        return this.orders.save(order);
+        const paid = await this.orders.save(order);
+        // remember which warehouse each unit left from (the shop ships from there)
+        await this.orders.recordAllocations(order.id, taken);
+        return (await this.orders.findById(order.id)) ?? paid;
       });
 
       await domainEvents.publish(
@@ -101,8 +106,8 @@ export class PayOrderUseCase {
       return saved;
     } catch (err) {
       if (!this.uow) {
-        for (const d of decremented) {
-          await this.products.incrementStock(d.productId, d.sku, d.quantity);
+        for (const t of taken) {
+          await this.products.incrementStock(t.product, t.sku, t.quantity, t.warehouse);
         }
       }
 

@@ -1,19 +1,22 @@
 import { Prisma } from '@prisma/client';
-import type { IProductRepository } from '@modules/catalog/domain/product.repository';
+import type { IProductRepository, StockAllocation } from '@modules/catalog/domain/product.repository';
 import {
-  totalStock,
+  unitsOf,
   type Product,
   type CreateProductInput,
   type UpdateProductInput,
   type ProductListFilter,
   type ProductFacets,
+  type SpecFacet,
   type FacetCount,
-} from '@modules/catalog/domain/product.entity';
-import { getPrisma, prisma, type PrismaTx } from '@shared/infra/prisma/client';
+  type VariantInput,
+} from '@modules/catalog/domain';
+import { DomainError } from '@shared/domain/DomainError';
+import { getPrisma, type PrismaTx } from '@shared/infra/prisma/client';
+import { runInTransaction } from '@shared/infra/prisma/transaction';
 import { paginate } from '@shared/pagination';
-import { mapProduct } from './mappers';
+import { mapProduct, mapSpecDefinition, productInclude } from './mappers';
 
-const withVariants = { variants: true } as const;
 const live = { deletedAt: null } as const;
 
 /** `%`, `_` and `\` mean something inside LIKE; a visitor's search text must not. */
@@ -21,102 +24,173 @@ function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, '\\$&');
 }
 
-/** Runs `fn` inside the open unit of work, or in its own transaction when there is none. */
-function inTransaction<T>(fn: (tx: PrismaTx) => Promise<T>): Promise<T> {
-  const client = getPrisma();
-  return client === prisma ? prisma.$transaction((tx) => fn(tx)) : fn(client);
-}
-
-/** `Product.stock` is the sum of its variants; recomputed after every stock change. */
+/** `Product.stock` is the sum of every variant in every warehouse; recomputed after each change. */
 async function syncStock(tx: PrismaTx, productId: string): Promise<void> {
   await tx.$executeRaw`UPDATE Product
-    SET stock = (SELECT COALESCE(SUM(stock), 0) FROM ProductVariant WHERE productId = ${productId})
+    SET stock = (
+      SELECT COALESCE(SUM(sl.quantity), 0)
+      FROM StockLevel sl JOIN ProductVariant v ON v.id = sl.variantId
+      WHERE v.productId = ${productId})
     WHERE id = ${productId}`;
 }
 
-const variantRows = (variants: CreateProductInput['variants']) =>
-  variants.map((v, position) => ({
-    sku: v.sku.trim(),
-    size: v.size.trim(),
-    width: v.width?.trim() || null,
-    stock: v.stock,
-    position,
-  }));
-
-/** Only the fields the caller sent: used by create (after defaults) and by partial updates. */
-function scalarData(i: UpdateProductInput): Prisma.ProductUncheckedUpdateInput {
-  const d: Prisma.ProductUncheckedUpdateInput = {};
-  if (i.slug !== undefined) d.slug = i.slug.trim().toLowerCase();
-  if (i.title !== undefined) d.title = i.title;
-  if (i.name !== undefined) d.name = i.name;
-  if (i.style !== undefined) d.style = i.style;
-  if (i.color !== undefined) d.color = i.color;
-  if (i.colorFamily !== undefined) d.colorFamily = i.colorFamily;
-  if (i.colorGroup !== undefined) d.colorGroup = i.colorGroup;
-  if (i.category !== undefined) d.category = i.category;
-  if (i.gender !== undefined) d.gender = i.gender;
-  if (i.description !== undefined) d.description = i.description;
-  if (i.features !== undefined) d.features = i.features;
-  if (i.leather !== undefined) d.leather = i.leather;
-  if (i.construction !== undefined) d.construction = i.construction;
-  if (i.sole !== undefined) d.sole = i.sole;
-  if (i.price !== undefined) d.price = i.price;
-  if (i.compareAtPrice !== undefined) d.compareAtPrice = i.compareAtPrice;
-  if (i.currency !== undefined) d.currency = i.currency.toUpperCase();
-  if (i.images !== undefined) d.images = i.images;
-  if (i.tags !== undefined) d.tags = i.tags;
-  if (i.featured !== undefined) d.featured = i.featured;
-  if (i.featuredOrder !== undefined) d.featuredOrder = i.featuredOrder;
-  return d;
+/**
+ * Creates or updates the variants of a product and their stock per warehouse, and removes
+ * variants that are no longer listed. A SKU can belong to one product only.
+ */
+async function writeVariants(tx: PrismaTx, productId: string, variants: VariantInput[]): Promise<void> {
+  const warehouses = new Map((await tx.warehouse.findMany()).map((w) => [w.code, w.id]));
+  for (const [position, v] of variants.entries()) {
+    const sku = v.sku.trim();
+    const owner = await tx.productVariant.findUnique({ where: { sku }, select: { productId: true } });
+    if (owner && owner.productId !== productId) {
+      throw new DomainError(`SKU "${sku}" already belongs to another product`, 'CONFLICT');
+    }
+    const row = await tx.productVariant.upsert({
+      where: { sku },
+      create: { productId, sku, label: v.label, price: v.price ?? null, position },
+      update: { label: v.label, price: v.price ?? null, position },
+    });
+    await tx.stockLevel.deleteMany({ where: { variantId: row.id } });
+    const levels = Object.entries(v.stock).map(([code, quantity]) => {
+      const warehouseId = warehouses.get(code);
+      if (!warehouseId) throw new DomainError(`Unknown warehouse "${code}"`, 'VALIDATION');
+      return { warehouseId, variantId: row.id, quantity };
+    });
+    if (levels.length) await tx.stockLevel.createMany({ data: levels });
+  }
+  await tx.productVariant.deleteMany({
+    where: { productId, sku: { notIn: variants.map((v) => v.sku.trim()) } },
+  });
 }
 
-function createData(input: CreateProductInput): Prisma.ProductUncheckedCreateInput {
-  return {
-    ...(scalarData(input) as Prisma.ProductUncheckedCreateInput),
-    // required columns without a database default
-    description: input.description ?? '',
-    features: input.features ?? [],
-    images: input.images ?? [],
-    tags: input.tags ?? [],
-    slug: input.slug.trim().toLowerCase(),
-    title: input.title,
-    name: input.name,
-    style: input.style,
-    color: input.color,
-    colorFamily: input.colorFamily,
-    category: input.category,
-    gender: input.gender,
-    price: input.price,
-    stock: totalStock(input.variants),
-    variants: { create: variantRows(input.variants) },
-  };
+/** Replaces the specification values of a product (keys must exist in its category). */
+async function writeSpecs(
+  tx: PrismaTx,
+  productId: string,
+  categoryId: string,
+  specs: Record<string, number | string>,
+): Promise<void> {
+  const defs = new Map((await tx.specDefinition.findMany({ where: { categoryId } })).map((d) => [d.key, d]));
+  const rows = Object.entries(specs).map(([key, value]) => {
+    const def = defs.get(key);
+    if (!def) throw new DomainError(`Unknown specification "${key}" for this category`, 'VALIDATION');
+    if (def.kind === 'number') {
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw new DomainError(`"${def.label}" must be a number`, 'VALIDATION');
+      }
+      return { productId, specId: def.id, valueNum: value, valueText: null };
+    }
+    return { productId, specId: def.id, valueNum: null, valueText: String(value) };
+  });
+  await tx.productSpec.deleteMany({ where: { productId } });
+  if (rows.length) await tx.productSpec.createMany({ data: rows });
+}
+
+async function categoryBySlug(tx: PrismaTx, slug: string) {
+  const category = await tx.category.findUnique({ where: { slug } });
+  if (!category) throw new DomainError(`Unknown category "${slug}"`, 'VALIDATION');
+  return category;
+}
+
+async function load(tx: PrismaTx, id: string): Promise<Product> {
+  return mapProduct(await tx.product.findUniqueOrThrow({ where: { id }, include: productInclude }));
+}
+
+async function createIn(tx: PrismaTx, input: CreateProductInput): Promise<Product> {
+  const category = await categoryBySlug(tx, input.category);
+  const row = await tx.product.create({
+    data: {
+      slug: input.slug.trim().toLowerCase(),
+      title: input.title,
+      brand: input.brand ?? '',
+      model: input.model ?? null,
+      categoryId: category.id,
+      description: input.description ?? '',
+      features: input.features ?? [],
+      price: input.price,
+      compareAtPrice: input.compareAtPrice ?? null,
+      currency: (input.currency ?? 'USD').toUpperCase(),
+      images: input.images ?? [],
+      tags: input.tags ?? [],
+      featured: input.featured ?? false,
+      featuredOrder: input.featuredOrder ?? 0,
+    },
+  });
+  await writeVariants(tx, row.id, input.variants);
+  await writeSpecs(tx, row.id, category.id, input.specs ?? {});
+  await syncStock(tx, row.id);
+  return load(tx, row.id);
+}
+
+/** Only the fields the caller sent are written. */
+async function updateIn(tx: PrismaTx, id: string, input: UpdateProductInput): Promise<Product> {
+  const data: Prisma.ProductUncheckedUpdateInput = {};
+  if (input.slug !== undefined) data.slug = input.slug.trim().toLowerCase();
+  if (input.title !== undefined) data.title = input.title;
+  if (input.brand !== undefined) data.brand = input.brand;
+  if (input.model !== undefined) data.model = input.model;
+  if (input.description !== undefined) data.description = input.description;
+  if (input.features !== undefined) data.features = input.features;
+  if (input.price !== undefined) data.price = input.price;
+  if (input.compareAtPrice !== undefined) data.compareAtPrice = input.compareAtPrice;
+  if (input.currency !== undefined) data.currency = input.currency.toUpperCase();
+  if (input.images !== undefined) data.images = input.images;
+  if (input.tags !== undefined) data.tags = input.tags;
+  if (input.featured !== undefined) data.featured = input.featured;
+  if (input.featuredOrder !== undefined) data.featuredOrder = input.featuredOrder;
+
+  let categoryId: string | undefined;
+  if (input.category !== undefined) {
+    categoryId = (await categoryBySlug(tx, input.category)).id;
+    data.categoryId = categoryId;
+  }
+  await tx.product.update({ where: { id }, data });
+
+  if (input.variants !== undefined) await writeVariants(tx, id, input.variants);
+  // specs are replaced when sent, or dropped when the category changed without new ones
+  if (input.specs !== undefined || categoryId !== undefined) {
+    const current = categoryId ?? (await tx.product.findUniqueOrThrow({ where: { id }, select: { categoryId: true } })).categoryId;
+    await writeSpecs(tx, id, current, input.specs ?? {});
+  }
+  await syncStock(tx, id);
+  return load(tx, id);
 }
 
 function buildWhere(filter: ProductListFilter): Prisma.ProductWhereInput {
-  const where: Prisma.ProductWhereInput = { ...live };
+  const and: Prisma.ProductWhereInput[] = [];
+  const where: Prisma.ProductWhereInput = { ...live, AND: and };
+
   if (filter.q) {
     const contains = escapeLike(filter.q);
-    where.OR = [
-      { title: { contains } },
-      { name: { contains } },
-      { color: { contains } },
-      { description: { contains } },
-    ];
+    and.push({
+      OR: [
+        { title: { contains } },
+        { brand: { contains } },
+        { model: { contains } },
+        { description: { contains } },
+        { variants: { some: { sku: { contains } } } },
+      ],
+    });
   }
-  if (filter.category) where.category = filter.category;
-  if (filter.gender) where.gender = { in: [filter.gender, 'unisex'] };
-  if (filter.style) where.style = filter.style;
-  if (filter.color) where.colorFamily = filter.color;
-  if (filter.leather) where.leather = filter.leather;
-  if (filter.size || filter.width) {
-    // the size (and width) the visitor picked must be in stock
-    where.variants = {
-      some: {
-        stock: { gt: 0 },
-        ...(filter.size ? { size: filter.size } : {}),
-        ...(filter.width ? { width: filter.width } : {}),
+  if (filter.category) where.category = { slug: filter.category };
+  for (const spec of filter.specs ?? []) {
+    const definition = { key: spec.key, category: { slug: filter.category } };
+    and.push({
+      specs: {
+        some: {
+          spec: definition,
+          ...(spec.kind === 'range'
+            ? { valueNum: { ...(spec.min !== undefined ? { gte: spec.min } : {}), ...(spec.max !== undefined ? { lte: spec.max } : {}) } }
+            : { valueText: { in: spec.values } }),
+        },
       },
-    };
+    });
+  }
+  if (filter.warehouse) {
+    and.push({
+      variants: { some: { stock: { some: { warehouse: { code: filter.warehouse }, quantity: { gt: 0 } } } } },
+    });
   }
   if (filter.minPrice !== undefined || filter.maxPrice !== undefined) {
     where.price = {
@@ -130,24 +204,53 @@ function buildWhere(filter: ProductListFilter): Prisma.ProductWhereInput {
   return where;
 }
 
+function buildOrderBy(filter: ProductListFilter): Prisma.ProductOrderByWithRelationInput[] {
+  const dir = filter.order === 'desc' ? 'desc' : 'asc';
+  switch (filter.sort) {
+    case 'price':
+      return [{ price: dir }, { id: 'asc' }];
+    case 'title':
+      return [{ title: dir }, { id: 'asc' }];
+    case 'createdAt':
+      return [{ createdAt: dir }, { id: 'asc' }];
+    case 'stock':
+      return [{ stock: dir }, { id: 'asc' }];
+    case 'rating':
+      return [{ ratingAvg: dir }, { ratingCount: dir }, { id: 'asc' }];
+    default:
+      return [{ featuredOrder: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }];
+  }
+}
+
 export class PrismaProductRepository implements IProductRepository {
   async findById(id: string): Promise<Product | null> {
-    const row = await getPrisma().product.findFirst({ where: { id, ...live }, include: withVariants });
+    const row = await getPrisma().product.findFirst({ where: { id, ...live }, include: productInclude });
     return row ? mapProduct(row) : null;
   }
 
   async findBySlug(slug: string): Promise<Product | null> {
     const row = await getPrisma().product.findFirst({
       where: { slug: slug.toLowerCase(), ...live },
-      include: withVariants,
+      include: productInclude,
     });
     return row ? mapProduct(row) : null;
+  }
+
+  /** In the order of `slugs`; unknown slugs are skipped. */
+  async findBySlugs(slugs: string[]): Promise<Product[]> {
+    const wanted = slugs.map((s) => s.toLowerCase());
+    const rows = await getPrisma().product.findMany({
+      where: { slug: { in: wanted }, ...live },
+      include: productInclude,
+    });
+    const bySlug = new Map(rows.map((r) => [r.slug, mapProduct(r)]));
+    return wanted.flatMap((s) => (bySlug.has(s) ? [bySlug.get(s)!] : []));
   }
 
   async findByIds(ids: string[]): Promise<Product[]> {
     const rows = await getPrisma().product.findMany({
       where: { id: { in: ids }, ...live },
-      include: withVariants,
+      include: productInclude,
     });
     return rows.map(mapProduct);
   }
@@ -155,71 +258,70 @@ export class PrismaProductRepository implements IProductRepository {
   async list(filter: ProductListFilter): Promise<{ data: Product[]; total: number }> {
     const { limit, skip } = paginate(filter.page, filter.limit);
     const where = buildWhere(filter);
-    const dir = filter.order === 'asc' ? 'asc' : 'desc';
-    const orderBy: Prisma.ProductOrderByWithRelationInput[] =
-      !filter.sort || filter.sort === 'featured'
-        ? [{ featuredOrder: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }]
-        : [{ [filter.sort]: dir }, { id: 'asc' }];
-
     const client = getPrisma();
     const [rows, total] = await Promise.all([
-      client.product.findMany({ where, orderBy, skip, take: limit, include: withVariants }),
+      client.product.findMany({ where, orderBy: buildOrderBy(filter), skip, take: limit, include: productInclude }),
       client.product.count({ where }),
     ]);
     return { data: rows.map(mapProduct), total };
   }
 
-  async listByStyle(style: string): Promise<Product[]> {
-    const rows = await getPrisma().product.findMany({
-      where: { style, ...live },
-      orderBy: [{ featuredOrder: 'asc' }, { createdAt: 'asc' }],
-      include: withVariants,
-    });
-    return rows.map(mapProduct);
-  }
-
-  async facets(filter: Pick<ProductListFilter, 'category' | 'gender'>): Promise<ProductFacets> {
+  async facets(filter: { category?: string }): Promise<ProductFacets> {
     const client = getPrisma();
-    const where = buildWhere(filter);
-    const counts = async (field: 'colorFamily' | 'leather'): Promise<FacetCount[]> => {
-      const rows = await client.product.groupBy({
-        by: [field],
-        where: { ...where, NOT: { [field]: '' } },
-        _count: { _all: true },
-      });
-      return rows
-        .filter((r) => r[field])
-        .map((r) => ({ value: r[field] as string, count: r._count._all }))
-        .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
-    };
+    const category = filter.category
+      ? await client.category.findUnique({ where: { slug: filter.category }, include: { specs: true } })
+      : null;
+    const productWhere: Prisma.ProductWhereInput = { ...live, ...(category ? { categoryId: category.id } : {}) };
 
-    // a product can have one size in several widths: count each product once
-    const variantCounts = async (column: 'size' | 'width'): Promise<FacetCount[]> => {
-      const col = Prisma.raw(`v.\`${column}\``);
-      const rows = await client.$queryRaw<{ value: string; count: bigint }[]>`
-        SELECT ${col} AS value, COUNT(DISTINCT v.productId) AS count
-        FROM ProductVariant v JOIN Product p ON p.id = v.productId
-        WHERE p.deletedAt IS NULL
-          ${filter.category ? Prisma.sql`AND p.category = ${filter.category}` : Prisma.empty}
-          ${filter.gender ? Prisma.sql`AND p.gender IN (${filter.gender}, 'unisex')` : Prisma.empty}
-          AND ${col} IS NOT NULL AND ${col} <> ''
-        GROUP BY ${col}`;
-      return rows.map((r) => ({ value: r.value, count: Number(r.count) }));
-    };
+    const specFacets: SpecFacet[] = [];
+    for (const row of [...(category?.specs ?? [])].sort((a, b) => a.sortOrder - b.sortOrder)) {
+      if (!row.filterable) continue;
+      const def = mapSpecDefinition(row);
+      const base: SpecFacet = {
+        key: def.key,
+        label: def.label,
+        group: def.group,
+        kind: def.kind,
+        unit: def.unit,
+        units: unitsOf(def.unitFamily).length ? unitsOf(def.unitFamily) : def.unit ? [{ symbol: def.unit, factor: 1 }] : [],
+        better: def.better,
+      };
+      if (def.kind === 'number') {
+        const agg = await client.productSpec.aggregate({
+          where: { specId: row.id, product: productWhere, valueNum: { not: null } },
+          _min: { valueNum: true },
+          _max: { valueNum: true },
+        });
+        if (agg._min.valueNum === null) continue;
+        specFacets.push({ ...base, min: agg._min.valueNum, max: agg._max.valueNum ?? agg._min.valueNum });
+      } else {
+        const groups = await client.productSpec.groupBy({
+          by: ['valueText'],
+          where: { specId: row.id, product: productWhere, valueText: { not: null } },
+          _count: { _all: true },
+        });
+        const options: FacetCount[] = groups
+          .map((g) => ({ value: g.valueText as string, count: g._count._all }))
+          .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+        if (options.length) specFacets.push({ ...base, options });
+      }
+    }
 
-    const [colors, leathers, sizes, widths, price] = await Promise.all([
-      counts('colorFamily'),
-      counts('leather'),
-      variantCounts('size'),
-      variantCounts('width'),
-      client.product.aggregate({ where, _min: { price: true }, _max: { price: true } }),
-    ]);
+    const price = await client.product.aggregate({ where: productWhere, _min: { price: true }, _max: { price: true } });
+    const warehouses = await client.$queryRaw<{ code: string; name: string; count: bigint }[]>`
+      SELECT w.code AS code, w.name AS name, COUNT(DISTINCT p.id) AS count
+      FROM Warehouse w
+      LEFT JOIN StockLevel sl ON sl.warehouseId = w.id AND sl.quantity > 0
+      LEFT JOIN ProductVariant v ON v.id = sl.variantId
+      LEFT JOIN Product p ON p.id = v.productId AND p.deletedAt IS NULL
+        ${category ? Prisma.sql`AND p.categoryId = ${category.id}` : Prisma.empty}
+      GROUP BY w.id, w.code, w.name, w.sortOrder
+      ORDER BY w.sortOrder, w.code`;
+
     return {
-      colors,
-      leathers,
-      sizes: sizes.sort(compareSizes),
-      widths: widths.sort((a, b) => a.value.localeCompare(b.value)),
       price: { min: price._min.price ?? 0, max: price._max.price ?? 0 },
+      specs: specFacets,
+      warehouses: warehouses.map((w) => ({ code: w.code, name: w.name, count: Number(w.count) })),
     };
   }
 
@@ -228,105 +330,104 @@ export class PrismaProductRepository implements IProductRepository {
       where: { featured: true, ...live },
       orderBy: [{ featuredOrder: 'asc' }, { createdAt: 'desc' }],
       take: limit,
-      include: withVariants,
+      include: productInclude,
     });
     return rows.map(mapProduct);
   }
 
-  async create(input: CreateProductInput): Promise<Product> {
-    const row = await getPrisma().product.create({ data: createData(input), include: withVariants });
-    return mapProduct(row);
+  create(input: CreateProductInput): Promise<Product> {
+    return runInTransaction((tx) => createIn(tx, input));
   }
 
-  async update(id: string, input: UpdateProductInput): Promise<Product | null> {
-    return inTransaction(async (tx) => {
+  update(id: string, input: UpdateProductInput): Promise<Product | null> {
+    return runInTransaction(async (tx) => {
       const existing = await tx.product.findFirst({ where: { id, ...live }, select: { id: true } });
-      if (!existing) return null;
-      const { variants, ...fields } = input;
-      const patch = scalarData(fields);
-      await tx.product.update({ where: { id }, data: patch });
-      if (variants) {
-        await tx.productVariant.deleteMany({ where: { productId: id } });
-        await tx.productVariant.createMany({
-          data: variantRows(variants).map((v) => ({ ...v, productId: id })),
-        });
-        await syncStock(tx, id);
-      }
-      const row = await tx.product.findUniqueOrThrow({ where: { id }, include: withVariants });
-      return mapProduct(row);
+      return existing ? updateIn(tx, id, input) : null;
     });
   }
 
   async softDelete(id: string): Promise<Product | null> {
-    const existing = await getPrisma().product.findFirst({ where: { id, ...live }, select: { id: true } });
-    if (!existing) return null;
-    const row = await getPrisma().product.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-      include: withVariants,
+    return runInTransaction(async (tx) => {
+      const existing = await tx.product.findFirst({ where: { id, ...live }, select: { id: true } });
+      if (!existing) return null;
+      await tx.product.update({ where: { id }, data: { deletedAt: new Date() } });
+      return load(tx, id);
     });
-    return mapProduct(row);
   }
 
   /**
-   * One `UPDATE ... WHERE stock >= quantity`: the check and the change are a single
-   * atomic statement, so two buyers can never take the last unit twice.
+   * Locks the stock rows of the variant (`FOR UPDATE`), then takes units from the warehouses
+   * in dispatch order. Two buyers of the last unit queue up on the lock: the second one
+   * sees zero and gets `null`. Nothing is written unless the whole quantity is available.
    */
-  async decrementStock(productId: string, sku: string, quantity: number): Promise<boolean> {
-    return inTransaction(async (tx) => {
-      const changed = await tx.$executeRaw`UPDATE ProductVariant v
+  decrementStock(productId: string, sku: string, quantity: number): Promise<StockAllocation[] | null> {
+    return runInTransaction(async (tx) => {
+      const levels = await tx.$queryRaw<{ warehouseId: string; variantId: string; quantity: number; code: string }[]>`
+        SELECT sl.warehouseId AS warehouseId, sl.variantId AS variantId, sl.quantity AS quantity, w.code AS code
+        FROM StockLevel sl
+        JOIN ProductVariant v ON v.id = sl.variantId
+        JOIN Warehouse w ON w.id = sl.warehouseId
         JOIN Product p ON p.id = v.productId
-        SET v.stock = v.stock - ${quantity}
-        WHERE v.productId = ${productId} AND v.sku = ${sku}
-          AND v.stock >= ${quantity} AND p.deletedAt IS NULL`;
-      if (changed !== 1) return false;
-      await syncStock(tx, productId);
-      return true;
-    });
-  }
+        WHERE v.productId = ${productId} AND v.sku = ${sku} AND p.deletedAt IS NULL AND sl.quantity > 0
+        ORDER BY w.sortOrder, w.code
+        FOR UPDATE OF sl`;
 
-  async incrementStock(productId: string, sku: string, quantity: number): Promise<void> {
-    await inTransaction(async (tx) => {
-      await tx.$executeRaw`UPDATE ProductVariant SET stock = stock + ${quantity}
-        WHERE productId = ${productId} AND sku = ${sku}`;
-      await syncStock(tx, productId);
-    });
-  }
-
-  async upsertBySlug(slug: string, data: CreateProductInput): Promise<Product> {
-    return inTransaction(async (tx) => {
-      const key = slug.trim().toLowerCase();
-      const existing = await tx.product.findUnique({ where: { slug: key }, select: { id: true } });
-      if (!existing) {
-        const row = await tx.product.create({ data: createData(data), include: withVariants });
-        return mapProduct(row);
+      let remaining = quantity;
+      const taken: { warehouseId: string; variantId: string; code: string; quantity: number }[] = [];
+      for (const level of levels) {
+        if (remaining === 0) break;
+        const take = Math.min(level.quantity, remaining);
+        taken.push({ ...level, quantity: take });
+        remaining -= take;
       }
-      await tx.product.update({
-        where: { id: existing.id },
-        data: { ...scalarData(data), stock: totalStock(data.variants), deletedAt: null },
+      if (remaining > 0) return null;
+
+      for (const t of taken) {
+        await tx.stockLevel.update({
+          where: { warehouseId_variantId: { warehouseId: t.warehouseId, variantId: t.variantId } },
+          data: { quantity: { decrement: t.quantity } },
+        });
+      }
+      await syncStock(tx, productId);
+      return taken.map((t) => ({ warehouse: t.code, quantity: t.quantity }));
+    });
+  }
+
+  incrementStock(productId: string, sku: string, quantity: number, warehouse?: string): Promise<void> {
+    return runInTransaction(async (tx) => {
+      const variant = await tx.productVariant.findFirst({ where: { productId, sku }, select: { id: true } });
+      if (!variant) return;
+      const target = warehouse
+        ? await tx.warehouse.findUnique({ where: { code: warehouse } })
+        : await tx.warehouse.findFirst({ orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }] });
+      if (!target) return;
+      await tx.stockLevel.upsert({
+        where: { warehouseId_variantId: { warehouseId: target.id, variantId: variant.id } },
+        create: { warehouseId: target.id, variantId: variant.id, quantity },
+        update: { quantity: { increment: quantity } },
       });
-      await tx.productVariant.deleteMany({ where: { productId: existing.id } });
-      await tx.productVariant.createMany({
-        data: variantRows(data.variants).map((v) => ({ ...v, productId: existing.id })),
-      });
-      await syncStock(tx, existing.id);
-      const row = await tx.product.findUniqueOrThrow({ where: { id: existing.id }, include: withVariants });
-      return mapProduct(row);
+      await syncStock(tx, productId);
+    });
+  }
+
+  upsertBySlug(slug: string, data: CreateProductInput): Promise<Product> {
+    return runInTransaction(async (tx) => {
+      const existing = await tx.product.findUnique({ where: { slug: slug.trim().toLowerCase() }, select: { id: true } });
+      if (!existing) return createIn(tx, data);
+      await tx.product.update({ where: { id: existing.id }, data: { deletedAt: null } });
+      return updateIn(tx, existing.id, data);
     });
   }
 
   async setRating(productId: string, avg: number, count: number): Promise<void> {
-    await getPrisma().product.updateMany({
-      where: { id: productId },
-      data: { ratingAvg: avg, ratingCount: count },
-    });
+    await getPrisma().product.updateMany({ where: { id: productId }, data: { ratingAvg: avg, ratingCount: count } });
   }
 
-  async count(): Promise<number> {
+  count(): Promise<number> {
     return getPrisma().product.count({ where: live });
   }
 
-  async countLowStock(threshold: number): Promise<number> {
+  countLowStock(threshold: number): Promise<number> {
     return getPrisma().product.count({ where: { ...live, stock: { lte: threshold } } });
   }
 
@@ -335,18 +436,8 @@ export class PrismaProductRepository implements IProductRepository {
       where: { ...live, stock: { lte: threshold } },
       orderBy: [{ stock: 'asc' }, { id: 'asc' }],
       take: limit,
-      include: withVariants,
+      include: productInclude,
     });
     return rows.map(mapProduct);
   }
-}
-
-/** Numeric sizes first in numeric order (6, 6.5, 7 …), then the rest alphabetically. */
-function compareSizes(a: FacetCount, b: FacetCount): number {
-  const na = Number(a.value);
-  const nb = Number(b.value);
-  if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
-  if (!Number.isNaN(na)) return -1;
-  if (!Number.isNaN(nb)) return 1;
-  return a.value.localeCompare(b.value);
 }

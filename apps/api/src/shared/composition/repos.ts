@@ -1,5 +1,5 @@
 import { userRepo, roleRepo, permissionRepo, refreshTokenRepo } from '../../modules/identity';
-import { productRepo } from '../../modules/catalog';
+import { productRepo, categoryRepo, warehouseRepo } from '../../modules/catalog';
 import { cartRepo, orderRepo } from '../../modules/ordering';
 import { reviewRepo } from '../../modules/reviews';
 import { favoriteRepo } from '../../modules/engagement';
@@ -8,6 +8,8 @@ import { issueRepo } from '../../modules/reporting';
 
 export const repos = {
   products: productRepo,
+  categories: categoryRepo,
+  warehouses: warehouseRepo,
   users: userRepo,
   orders: orderRepo,
   reviews: reviewRepo,

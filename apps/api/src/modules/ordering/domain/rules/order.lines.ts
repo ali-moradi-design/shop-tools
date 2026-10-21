@@ -1,5 +1,5 @@
 import { DomainError } from '@shared/domain/DomainError';
-import { assertSufficientStock, findVariant, type Product } from '@modules/catalog';
+import { assertSufficientStock, findVariant, unitPrice, type Product } from '@modules/catalog';
 import type { OrderItem } from '../order.entity';
 
 export interface LineRequest {
@@ -19,11 +19,10 @@ export function buildOrderLines(products: Product[], requests: LineRequest[]): O
     return {
       product: product.id,
       sku: variant.sku,
-      size: variant.size,
-      width: variant.width,
+      label: variant.label,
       title: product.title,
       image: product.images[0],
-      price: product.price,
+      price: unitPrice(product, variant),
       quantity: req.quantity,
     };
   });
