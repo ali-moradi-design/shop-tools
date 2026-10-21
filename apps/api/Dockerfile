@@ -1,10 +1,12 @@
-# Welt & Grain API. Build from the repository root:
+# Tools shop API. Build from the repository root:
 #   docker build -f apps/api/Dockerfile -t shop-tools-api .
 FROM node:22-bookworm-slim AS build
 WORKDIR /repo
 RUN corepack enable
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/api/package.json apps/api/
+# the Prisma client is generated at install time
+COPY apps/api/prisma apps/api/prisma
 RUN pnpm install --frozen-lockfile --filter @st/api
 COPY apps/api apps/api
 RUN pnpm --filter @st/api build \
