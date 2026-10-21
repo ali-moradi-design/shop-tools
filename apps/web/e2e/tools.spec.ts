@@ -1,10 +1,14 @@
 import { expect, test } from '@playwright/test';
 
 const count = async (page: import('@playwright/test').Page) => {
-  // during a client-side navigation the old and the new list can coexist for a moment
-  const label = page.getByTestId('result-count');
-  await expect(label).toHaveCount(1);
-  return Number(((await label.innerText()).match(/\d+/) ?? ['0'])[0]);
+  // during a client-side navigation the old and the new list can coexist for a moment: read until there is one
+  let total = 0;
+  await expect(async () => {
+    const texts = await page.getByTestId('result-count').allInnerTexts();
+    expect(texts).toHaveLength(1);
+    total = Number((texts[0].match(/\d+/) ?? ['0'])[0]);
+  }).toPass();
+  return total;
 };
 
 test('spec filters: a range with a unit narrows the list and the unit can be switched', async ({ page }) => {
@@ -15,8 +19,7 @@ test('spec filters: a range with a unit narrows the list and the unit can be swi
   // a word filter (checkboxes) lives in the URL
   await page.locator('aside[aria-label="Filters"]').getByRole('checkbox', { name: /^Brushless/ }).click();
   await expect(page).toHaveURL(/spec\.motor=Brushless/);
-  const brushless = await count(page);
-  expect(brushless).toBeLessThan(all);
+  await expect.poll(() => count(page)).toBeLessThan(all); // the list is re-rendered on the server
   await expect(page.getByTestId('active-filters')).toBeVisible();
 
   // a number range with a unit: the API converts in·lb to Nm
