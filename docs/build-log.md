@@ -115,3 +115,15 @@ What was done in each session, in order. Updated at the end of every step.
   Deploy: MySQL container (internal network, 128 MB buffer pool, `performance_schema`
   off, 512 MB), the API runs `prisma migrate deploy` on start. CI builds the API
   image (Docker could not apt-get inside this sandbox, so the image is verified in CI).
+
+## Step 4: PPR to SSR
+
+- `cacheComponents` off; every page is `force-dynamic`; `'use cache'`, `cacheLife`,
+  `cacheTag`, `generateStaticParams`, the `/hooks/revalidate` route, the admin
+  `refreshCatalog` action and the reset script's revalidate call are gone. The editor
+  now just calls `router.refresh()`. `next build` lists only dynamic (`ƒ`) routes and
+  works with the API stopped. Why SSR: `docs/ssr.md`.
+- CSP moved to `src/proxy.ts` with a per-request nonce: scripts no longer need
+  `'unsafe-inline'` (an accepted risk in `docs/security.md` is removed). Unit tests for
+  the policy; E2E tests for the nonce, the cache headers and price freshness (9/9).
+- Web image no longer needs the API at build time.

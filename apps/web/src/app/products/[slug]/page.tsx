@@ -6,7 +6,6 @@ import {
   fetchColors,
   fetchLiveVariants,
   fetchProduct,
-  fetchProducts,
   type Product,
 } from '@/entities/product';
 import { BuyBox, BuyBoxSkeleton } from '@/features/add-to-cart';
@@ -18,12 +17,6 @@ import { formatMoney } from '@/shared/lib/money';
 import { Icon, Stars } from '@/shared/ui';
 
 type Props = { params: Promise<{ slug: string }> };
-
-/** Featured products are prerendered at build time; the rest on first visit. */
-export async function generateStaticParams() {
-  const { data } = await fetchProducts({ featured: true, limit: 24 });
-  return data.map((p) => ({ slug: p.slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await fetchProduct((await params).slug);

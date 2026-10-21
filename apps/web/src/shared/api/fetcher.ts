@@ -1,13 +1,13 @@
 import { API_V1 } from '@/shared/config';
 import { ApiError } from './types';
 
-export type FetchInit = RequestInit & {
-  next?: { revalidate?: number | false; tags?: string[] };
-};
+export type FetchInit = RequestInit;
 
 export async function apiGetJson<T>(path: string, init?: FetchInit): Promise<T> {
   const url = `${API_V1}${path.startsWith('/') ? path : `/${path}`}`;
+  // SSR: every page render asks the API again, so prices and stock are always current
   const res = await fetch(url, {
+    cache: 'no-store',
     ...init,
     headers: {
       Accept: 'application/json',
