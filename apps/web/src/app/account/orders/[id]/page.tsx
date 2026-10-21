@@ -7,6 +7,7 @@ import { STATUS_LABEL, type Order } from '@/entities/order';
 import { requireUser } from '@/features/auth/server';
 import { ApiError } from '@/shared/api';
 import { serverApi } from '@/shared/api/server';
+import { WAREHOUSE_NAMES } from '@/shared/config';
 import { formatMoney } from '@/shared/lib/money';
 
 export const metadata: Metadata = { title: 'Order', robots: { index: false } };
@@ -40,7 +41,7 @@ async function OrderView({ params, searchParams }: Props) {
         {order.items.map((i) => (
           <li key={i.sku} className="grid grid-cols-[80px_1fr_auto] items-center gap-4 border-b border-line py-4 text-[14.5px]">
             <div className="relative h-20 bg-soft">{i.image && <Image src={i.image} alt="" fill sizes="80px" className="object-contain" />}</div>
-            <div>{i.title}<div className="text-mute">Size {i.size}{i.width ? ` · ${i.width}` : ''} · Qty {i.quantity}</div></div>
+            <div>{i.title}<div className="text-mute">{i.label} · Qty {i.quantity}</div>{i.allocations && i.allocations.length > 0 && <div className="font-mono text-[12px] text-steel" data-testid="order-allocations">Shipped from {i.allocations.map((a) => `${WAREHOUSE_NAMES[a.warehouse] ?? a.warehouse} (${a.quantity})`).join(', ')}</div>}</div>
             <div>{formatMoney(i.price * i.quantity)}</div>
           </li>
         ))}

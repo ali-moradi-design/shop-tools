@@ -1,75 +1,49 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { COLLECTIONS, MAIN_NAV, SUB_NAV } from '@/shared/config';
+import type { Category } from '@/entities/category';
 import { Icon, Logo } from '@/shared/ui';
-
-const titleOf = (slug: string) => COLLECTIONS.find((c) => c.slug === slug)?.title ?? slug;
+import { CompareLink } from '@/features/compare';
 
 /**
- * Header. `cart` and `account` are slots for the
- * dynamic, per-visitor parts.
+ * Header: utility bar, logo, search, account/compare/cart, category bar.
+ * `cart` and `account` are slots for the per-visitor client parts.
  */
-export function SiteHeader({ cart, account }: { cart: ReactNode; account: ReactNode }) {
+export function SiteHeader({ cart, account, categories }: { cart: ReactNode; account: ReactNode; categories: Category[] }) {
   return (
-    <header className="sticky top-0 z-40 bg-white">
-      <div className="h-[33px] bg-ink text-center text-[11px] font-medium leading-[33px] tracking-[0.14em] text-white">
-        FREE SHIPPING AND RETURNS ON EVERY ORDER
-        <Link href="/help" className="ml-2 underline underline-offset-[3px]">
-          DETAILS
-        </Link>
+    <header className="sticky top-0 z-30 bg-white">
+      <div className="flex justify-between bg-ink px-4 py-1.5 font-mono text-[11px] tracking-[0.06em] text-[#c9ced3] sm:px-8">
+        <span>
+          FREE SHIPPING OVER $150 · SHIPS FROM <b className="font-medium text-accent">BERLIN</b> / <b className="font-medium text-accent">HAMBURG</b> / <b className="font-medium text-accent">MUNICH</b>
+        </span>
+        <span className="hidden sm:inline">DEMO SHOP — PAYMENTS ARE SIMULATED</span>
       </div>
-      <div className="grid h-[78px] grid-cols-[1fr_auto_1fr] items-center border-b border-line px-4 sm:px-[30px]">
-        <nav aria-label="Main" className="flex items-center gap-6 text-[13px] font-medium tracking-[0.1em]">
-          <details className="group relative lg:hidden">
-            <summary className="flex cursor-pointer list-none items-center" aria-label="Menu">
-              <Icon name="menu" />
-            </summary>
-            <div className="absolute left-0 top-10 z-50 w-64 border border-line bg-white p-4 shadow-sm">
-              {COLLECTIONS.map((c) => (
-                <Link key={c.slug} href={`/collections/${c.slug}`} className="block py-1.5 text-sm tracking-normal">
-                  {c.title}
-                </Link>
-              ))}
-              <Link href="/about" className="block py-1.5 text-sm tracking-normal">About</Link>
-            </div>
-          </details>
-          {MAIN_NAV.map((menu) => (
-            <div key={menu.label} className="group relative hidden lg:block">
-              <button type="button" className="flex items-center gap-1 py-6 uppercase" aria-haspopup="true">
-                {menu.label}
-                <Icon name="chevron" width={12} height={12} />
-              </button>
-              <div className="invisible absolute left-0 top-full z-50 w-56 border border-line bg-white p-4 opacity-0 shadow-sm transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-                {menu.links.map((slug) => (
-                  <Link key={slug} href={`/collections/${slug}`} className="block py-1.5 text-sm font-normal tracking-normal hover:underline">
-                    {titleOf(slug)}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-          <Link href="/about" className="hidden uppercase lg:block">
-            About
-          </Link>
-        </nav>
-        <Link href="/" aria-label="Welt & Grain home">
+      <div className="flex h-[68px] items-center gap-5 border-b-2 border-ink px-4 sm:gap-7 sm:px-8">
+        <Link href="/" aria-label="Toolbench home">
           <Logo />
         </Link>
-        <div className="flex items-center justify-end gap-5 text-[13px] font-medium tracking-[0.1em]">
-          <Link href="/help" className="hidden uppercase lg:block">
-            Help
-          </Link>
+        <form action="/search" role="search" className="flex h-[42px] min-w-0 flex-1 border-2 border-ink">
+          <label htmlFor="site-search" className="sr-only">Search tools, SKUs or specs</label>
+          <input
+            id="site-search"
+            name="q"
+            placeholder="Search tools, SKUs or specs — e.g. “18V hammer drill”"
+            className="min-w-0 flex-1 px-3.5 text-[14px] outline-none placeholder:text-mute"
+          />
+          <button type="submit" className="bg-ink px-5 font-mono text-[12px] tracking-[0.08em] text-white hover:text-accent">
+            <span className="sr-only sm:not-sr-only">SEARCH</span>
+            <Icon name="search" width={18} height={18} className="sm:hidden" />
+          </button>
+        </form>
+        <div className="flex items-center gap-5 text-[14px] font-medium">
           {account}
-          <Link href="/search" aria-label="Search">
-            <Icon name="search" width={21} height={21} />
-          </Link>
+          <CompareLink />
           {cart}
         </div>
       </div>
-      <nav aria-label="Categories" className="hidden h-12 items-center justify-center gap-8 border-b border-line bg-soft text-[13.5px] lg:flex">
-        {SUB_NAV.map((c) => (
-          <Link key={c.slug} href={`/collections/${c.slug}`} className="hover:underline">
-            {c.title}
+      <nav aria-label="Categories" className="no-scrollbar flex overflow-x-auto border-b border-line bg-white font-sans text-[13px] font-semibold uppercase tracking-[0.05em]">
+        {categories.map((c) => (
+          <Link key={c.slug} href={`/categories/${c.slug}`} className="shrink-0 border-r border-line-soft px-[18px] py-3 first:border-l hover:bg-ink hover:text-accent">
+            {c.name}
           </Link>
         ))}
       </nav>

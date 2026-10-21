@@ -39,7 +39,7 @@ export function FakeGateway({ orderId, amount }: { orderId: string; amount: numb
   const field = 'mt-1 block w-full rounded-md border border-[#d0d5dd] px-3 py-2.5 outline-none focus:border-[#444]';
   return (
     <div className="mx-auto my-14 max-w-md rounded-xl border border-[#d0d5dd] p-8 font-sans shadow-sm">
-      <p className="text-[12px] font-medium uppercase tracking-[0.2em] text-mute">Welt Pay · test gateway</p>
+      <p className="text-[12px] font-medium uppercase tracking-[0.2em] text-mute">Toolbench Pay · test gateway</p>
       <p className="mt-2 text-[30px] font-medium" data-testid="pay-amount">{formatMoney(amount)}</p>
       <p className="text-[13px] text-mute">Order #{orderId.slice(-6).toUpperCase()} — no real money is charged.</p>
       <form className="mt-6 space-y-4 text-[14px]" onSubmit={(e) => { e.preventDefault(); void pay(); }}>

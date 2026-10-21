@@ -2,13 +2,14 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { API_V1 } from '@/shared/config';
 import { ApiError } from './types';
+import { visitorIpHeaders } from './visitor-ip';
 
 /** Per-visitor API read from a server component: forwards the visitor's cookies. */
 export async function serverApi<T>(path: string): Promise<T> {
   const jar = await cookies();
   const res = await fetch(`${API_V1}${path}`, {
     cache: 'no-store',
-    headers: { Accept: 'application/json', Cookie: jar.toString() },
+    headers: { Accept: 'application/json', Cookie: jar.toString(), ...(await visitorIpHeaders()) },
   });
   const body = await res.json().catch(() => undefined);
   if (!res.ok) {

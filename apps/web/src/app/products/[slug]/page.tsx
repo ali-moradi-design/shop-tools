@@ -2,19 +2,16 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import {
-  fetchColors,
-  fetchLiveVariants,
-  fetchProduct,
-  type Product,
-} from '@/entities/product';
+import { fetchCategory, fetchWarehouses } from '@/entities/category';
+import { fetchLiveVariants, fetchProduct, lowestPrice, SpecTable, type Product } from '@/entities/product';
 import { BuyBox, BuyBoxSkeleton } from '@/features/add-to-cart';
+import { CompareToggle } from '@/features/compare';
 import { FavoriteButton } from '@/features/favorite';
 import { ReviewForm, ReviewList } from '@/features/reviews';
-import { ColorPicker, Details, Editorial, Gallery } from '@/widgets/product-detail';
-import { COLLECTIONS, SITE } from '@/shared/config';
+import { Details, Gallery } from '@/widgets/product-detail';
+import { SITE } from '@/shared/config';
 import { formatMoney } from '@/shared/lib/money';
-import { Icon, Stars } from '@/shared/ui';
+import { Stars } from '@/shared/ui';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -23,40 +20,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!product) return {};
   return {
     title: product.title,
-    description: `${product.title} — ${product.features.slice(0, 2).join(', ')}. ${formatMoney(product.price)}, free shipping and returns.`,
+    description: `${product.title} — ${product.features.slice(0, 2).join(', ')}. ${formatMoney(product.price)}, stock per warehouse.`,
     alternates: { canonical: `/products/${product.slug}` },
     openGraph: { images: product.images.slice(0, 1), type: 'website' },
   };
 }
 
-function collectionOf(p: Product) {
-  return (
-    COLLECTIONS.find((c) => c.category === p.category && c.gender === p.gender) ??
-    COLLECTIONS.find((c) => c.category === p.category)
-  );
-}
-
-/** Live stock per size: a dynamic hole in the prerendered product page. */
+/** Live stock per variant and warehouse, streamed so the rest of the page is not held back. */
 async function LiveBuyBox({ product }: { product: Product }) {
-  const variants = await fetchLiveVariants(product.slug);
-  const sizeNote = product.category === 'boots' ? 'Order ½ size smaller than you wear in sneakers.' : undefined;
-  return <BuyBox productId={product.id} price={product.price} variants={variants} sizeNote={sizeNote} />;
+  const [variants, warehouses] = await Promise.all([fetchLiveVariants(product.slug), fetchWarehouses()]);
+  return <BuyBox productId={product.id} price={product.price} variants={variants} warehouses={warehouses} />;
 }
 
 function JsonLd({ product }: { product: Product }) {
-  const collection = collectionOf(product);
   const url = `${SITE.url}/products/${product.slug}`;
   const data = [
     {
       '@context': 'https://schema.org',
       '@type': 'Product',
       name: product.title,
-      image: product.images,
+      image: product.images.map((i) => (i.startsWith('/') ? `${SITE.url}${i}` : i)),
       description: product.description,
       sku: product.variants[0]?.sku,
-      color: product.color,
-      material: product.leather,
-      brand: { '@type': 'Brand', name: SITE.name },
+      mpn: product.model,
+      brand: { '@type': 'Brand', name: product.brand || SITE.name },
+      category: product.categoryName,
       ...(product.ratingCount > 0 && {
         aggregateRating: { '@type': 'AggregateRating', ratingValue: product.ratingAvg, reviewCount: product.ratingCount },
       }),
@@ -64,7 +52,7 @@ function JsonLd({ product }: { product: Product }) {
         '@type': 'Offer',
         url,
         priceCurrency: product.currency,
-        price: (product.price / 100).toFixed(2),
+        price: (lowestPrice(product) / 100).toFixed(2),
         availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       },
     },
@@ -73,10 +61,8 @@ function JsonLd({ product }: { product: Product }) {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: SITE.url },
-        ...(collection
-          ? [{ '@type': 'ListItem', position: 2, name: collection.title, item: `${SITE.url}/collections/${collection.slug}` }]
-          : []),
-        { '@type': 'ListItem', position: collection ? 3 : 2, name: product.title, item: url },
+        { '@type': 'ListItem', position: 2, name: product.categoryName, item: `${SITE.url}/categories/${product.category}` },
+        { '@type': 'ListItem', position: 3, name: product.title, item: url },
       ],
     },
   ];
@@ -92,62 +78,67 @@ function JsonLd({ product }: { product: Product }) {
 export default async function ProductPage({ params }: Props) {
   const product = await fetchProduct((await params).slug);
   if (!product) notFound();
-  const colors = await fetchColors(product.slug);
-  const collection = collectionOf(product);
+  const category = await fetchCategory(product.category);
+  const unitsByKey = Object.fromEntries((category?.specs ?? []).map((s) => [s.key, s.units]));
+  const keySpecs = product.specs.slice(0, 5);
 
   return (
-    <>
+    <div className="container-page pb-28">
       <JsonLd product={product} />
-      <nav aria-label="Breadcrumb" className="px-4 py-4 text-[13px] text-mute sm:px-[58px]">
-        <Link href="/" className="text-ink underline underline-offset-[3px]">Home</Link>
-        {collection && (
-          <>
-            {' › '}
-            <Link href={`/collections/${collection.slug}`} className="text-ink underline underline-offset-[3px]">{collection.title}</Link>
-          </>
-        )}
-        {' › '}
-        <span aria-current="page">{product.name}</span>
+      <nav aria-label="Breadcrumb" className="py-4 font-mono text-[12px] text-mute">
+        <Link href="/" className="hover:text-ink">Home</Link> /{' '}
+        <Link href={`/categories/${product.category}`} className="hover:text-ink">{product.categoryName}</Link> /{' '}
+        <span className="text-ink" aria-current="page">{product.model ?? product.slug}</span>
       </nav>
-      <section className="grid gap-10 px-4 sm:px-[58px] lg:grid-cols-[730px_1fr] lg:gap-[50px]">
-        <Gallery images={product.images} title={product.title} />
-        <div className="lg:sticky lg:top-[180px] lg:self-start">
+      <section className="grid gap-9 lg:grid-cols-[1.1fr_1fr]">
+        <Gallery images={product.images} title={product.title} badge={product.compareAtPrice ? `Save ${formatMoney(product.compareAtPrice - product.price)}` : undefined} />
+        <div className="space-y-4">
+          <p className="font-mono text-[12px] text-mute">SKU {product.model ?? product.slug}{product.brand ? ` · BRAND: ${product.brand.toUpperCase()}` : ''}</p>
           <div className="flex items-start justify-between gap-4">
-            <h1 className="heading text-[30px]">{product.name}</h1>
+            <h1 className="heading text-[38px] leading-[1.02] sm:text-[48px]">{product.title}</h1>
             <FavoriteButton productId={product.id} />
           </div>
-          <p className="my-2 text-[16px]">
-            {product.compareAtPrice && <s className="mr-2 text-mute">{formatMoney(product.compareAtPrice)}</s>}
-            {formatMoney(product.price)} or 4 payments of {formatMoney(Math.round(product.price / 4))}
-          </p>
-          <p className="flex items-center gap-2 text-[14.5px]">
-            <span className="grid h-4 w-4 place-items-center rounded-full bg-ink text-white">
-              <Icon name="check" width={10} height={10} strokeWidth={3} />
-            </span>
-            Honest Pricing Guarantee
-          </p>
           {product.ratingCount > 0 && (
-            <a href="#reviews" className="mt-2 flex items-center gap-2 text-[14px]">
+            <a href="#reviews" className="flex items-center gap-2 text-[14px]">
               <Stars value={product.ratingAvg} />
-              <span className="underline">{product.ratingAvg.toFixed(1)} ({product.ratingCount} reviews)</span>
+              <span className="font-mono text-[12px] underline">{product.ratingAvg.toFixed(1)} · {product.ratingCount} reviews</span>
             </a>
           )}
-          <ColorPicker current={product} colors={colors} />
+          <p className="flex items-baseline gap-3">
+            <span className="font-display text-[44px] font-bold leading-none" data-testid="product-price">{formatMoney(product.price, product.currency)}</span>
+            {product.compareAtPrice && <s className="font-mono text-mute">{formatMoney(product.compareAtPrice, product.currency)}</s>}
+          </p>
+          {keySpecs.length > 0 && (
+            <dl className="border-t-2 border-ink font-mono text-[12px]">
+              {keySpecs.map((s) => (
+                <div key={s.key} className="flex justify-between border-b border-line-soft py-1.5">
+                  <dt>{s.label}</dt>
+                  <dd className="font-semibold">{s.kind === 'number' ? `${Number(s.value.toString())} ${s.unit ?? ''}`.trim() : s.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
           <Suspense fallback={<BuyBoxSkeleton />}>
             <LiveBuyBox product={product} />
           </Suspense>
+          <CompareToggle item={{ slug: product.slug, title: product.title, image: product.images[0], category: product.category, categoryName: product.categoryName }} className="text-[13px]" />
         </div>
       </section>
-      <Details product={product} />
-      <Editorial product={product} />
-      <section id="reviews" className="scroll-mt-40 px-4 py-16 sm:px-[58px]">
-        <h2 className="heading mb-6 text-[28px]">Reviews</h2>
-        <Suspense fallback={<div className="h-40" />}>
-          <ReviewList slug={product.slug} />
-        </Suspense>
-        <h3 className="heading mb-4 mt-12 text-[22px]">Write a review</h3>
-        <ReviewForm productId={product.id} />
+
+      <section className="mt-11 grid items-start gap-7 lg:grid-cols-[1.4fr_1fr]">
+        {product.specs.length > 0 ? <SpecTable specs={product.specs} unitsByKey={unitsByKey} /> : <div />}
+        <div id="reviews" className="panel scroll-mt-40 p-5">
+          <h2 className="heading mb-3 text-[28px]">Customer reviews</h2>
+          <Suspense fallback={<div className="h-40" />}>
+            <ReviewList slug={product.slug} />
+          </Suspense>
+          <h3 className="heading mb-3 mt-8 text-[22px]">Write a review</h3>
+          <ReviewForm productId={product.id} />
+        </div>
       </section>
-    </>
+      <div className="mt-8">
+        <Details product={product} />
+      </div>
+    </div>
   );
 }

@@ -1,37 +1,49 @@
-import type { ProductCategory, ProductGender } from '@/shared/config';
+import type { UnitOption } from '@/shared/lib/units';
 
-export type { ProductCategory, ProductGender };
+export interface WarehouseStock {
+  warehouse: string;
+  quantity: number;
+}
 
 export interface ProductVariant {
   sku: string;
-  size: string;
-  width?: string;
+  label: string;
+  /** Overrides the product price when set. */
+  price?: number;
   stock: number;
+  stockByWarehouse: WarehouseStock[];
 }
 
-/** Mirrors the API's ProductDto. Money is in cents. */
+export interface ProductSpecValue {
+  key: string;
+  label: string;
+  group: string;
+  kind: 'number' | 'text';
+  unit?: string;
+  unitFamily?: string;
+  /** Numbers are in the base unit. */
+  value: number | string;
+}
+
+/** Mirrors the API's product. Money is in cents. */
 export interface Product {
   id: string;
   slug: string;
   title: string;
-  name: string;
-  style: string;
-  color: string;
-  colorFamily: string;
-  colorGroup?: string;
-  category: ProductCategory;
-  gender: ProductGender;
+  brand: string;
+  model?: string;
+  category: string;
+  categoryName: string;
   description: string;
   features: string[];
-  leather?: string;
-  construction?: string;
-  sole?: string;
   price: number;
   compareAtPrice?: number;
   currency: string;
   images: string[];
   variants: ProductVariant[];
   stock: number;
+  warehouses: WarehouseStock[];
+  specs: ProductSpecValue[];
   tags: string[];
   featured: boolean;
   ratingAvg: number;
@@ -45,25 +57,33 @@ export interface FacetCount {
   count: number;
 }
 
-export interface ProductFacets {
-  colors: FacetCount[];
-  leathers: FacetCount[];
-  sizes: FacetCount[];
-  widths: FacetCount[];
-  price: { min: number; max: number };
+export interface SpecFacet {
+  key: string;
+  label: string;
+  group: string;
+  kind: 'number' | 'text';
+  unit?: string;
+  units: UnitOption[];
+  min?: number;
+  max?: number;
+  options?: FacetCount[];
+  better?: 'higher' | 'lower';
 }
 
-export type ProductSort = 'featured' | 'price' | 'title' | 'createdAt';
+export interface ProductFacets {
+  price: { min: number; max: number };
+  specs: SpecFacet[];
+  warehouses: { code: string; name: string; count: number }[];
+}
+
+export type ProductSort = 'featured' | 'price' | 'title' | 'createdAt' | 'stock' | 'rating';
 
 export interface ProductQuery {
   q?: string;
-  category?: ProductCategory;
-  gender?: ProductGender;
-  style?: string;
-  color?: string;
-  leather?: string;
-  size?: string;
-  width?: string;
+  category?: string;
+  /** `spec.<key>` filters, e.g. { 'spec.torque': '40..100Nm' }. */
+  specs?: Record<string, string>;
+  warehouse?: string;
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
@@ -72,4 +92,24 @@ export interface ProductQuery {
   limit?: number;
   sort?: ProductSort;
   order?: 'asc' | 'desc';
+}
+
+export interface CompareRow {
+  key: string;
+  label: string;
+  group: string;
+  kind: 'number' | 'text';
+  unit?: string;
+  units: UnitOption[];
+  better?: 'higher' | 'lower';
+  values: (number | string | null)[];
+  best: boolean[];
+  same: boolean;
+}
+
+export interface Comparison {
+  category: { slug: string; name: string };
+  products: Product[];
+  rows: CompareRow[];
+  warehouses: { code: string; name: string; city: string; sortOrder: number }[];
 }

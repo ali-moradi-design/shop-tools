@@ -1,55 +1,39 @@
 import Link from 'next/link';
-import { COLLECTIONS, SITE } from '@/shared/config';
+import type { Category } from '@/entities/category';
+import { SITE } from '@/shared/config';
 
-const columns = [
-  { title: 'Shop', links: COLLECTIONS.map((c) => ({ href: `/collections/${c.slug}`, label: c.title })) },
-  {
-    title: 'About',
-    links: [
-      { href: '/about', label: 'Our Story' },
-      { href: '/about#leather', label: 'Our Leathers' },
-      { href: '/about#craft', label: 'Craft' },
-    ],
-  },
-  {
-    title: 'Support',
-    links: [
-      { href: '/help', label: 'FAQ' },
-      { href: '/help#shipping', label: 'Shipping & Returns' },
-      { href: '/help#sizing', label: 'Size Guide' },
-      { href: '/account', label: 'My Account' },
-    ],
-  },
-];
-
-export function SiteFooter() {
+export function SiteFooter({ categories }: { categories: Category[] }) {
   return (
-    <footer className="border-t border-line">
-      <div className="container-page grid gap-10 py-14 text-[13.5px] sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1.6fr] lg:px-32">
-        {columns.map((col) => (
-          <div key={col.title}>
-            <h2 className="mb-3 text-[14px]">{col.title}</h2>
-            <ul className="space-y-1.5">
-              {col.links.map((l) => (
-                <li key={l.href + l.label}>
-                  <Link href={l.href} className="text-mute hover:text-ink">
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+    <footer className="mt-16 bg-ink text-[13px] text-[#aeb4ba]">
+      <div className="container-page grid gap-8 py-9 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
         <div>
-          <h2 className="text-[14px]">Sign Up For Early Access &amp; Exclusive Events</h2>
-          <form action="/help" className="mt-5 flex border-b border-ink">
-            <label htmlFor="newsletter" className="sr-only">Email address</label>
-            <input id="newsletter" type="email" placeholder="Email address" className="min-w-0 flex-1 bg-transparent py-2.5 outline-none placeholder:text-mute" />
-            <button type="submit" aria-label="Sign up">→</button>
-          </form>
-          <p className="mt-6 text-mute">
-            © 2026 {SITE.legalName}. A demo shop — no real orders or payments.
+          <h2 className="mb-2 font-display text-[15px] font-bold uppercase tracking-[0.1em] text-white">{SITE.name}</h2>
+          <p className="max-w-md">
+            A demo shop for a portfolio. Product photos belong to their owners and are used only as sample content;
+            prices and stock are generated and the payment gateway is simulated.
           </p>
+        </div>
+        <div>
+          <h2 className="mb-2 font-display text-[15px] font-bold uppercase tracking-[0.1em] text-white">Shop</h2>
+          <ul className="space-y-1">
+            {categories.slice(0, 6).map((c) => (
+              <li key={c.slug}><Link href={`/categories/${c.slug}`} className="hover:text-white">{c.name}</Link></li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h2 className="mb-2 font-display text-[15px] font-bold uppercase tracking-[0.1em] text-white">Help</h2>
+          <ul className="space-y-1">
+            <li><Link href="/help" className="hover:text-white">FAQ</Link></li>
+            <li><Link href="/help#shipping" className="hover:text-white">Shipping & returns</Link></li>
+            <li><Link href="/help#specs" className="hover:text-white">Spec guide</Link></li>
+            <li><Link href="/account" className="hover:text-white">My account</Link></li>
+          </ul>
+        </div>
+        <div>
+          <h2 className="mb-2 font-display text-[15px] font-bold uppercase tracking-[0.1em] text-white">Warehouses</h2>
+          <p>Berlin · Hamburg · Munich</p>
+          <p className="mt-3">© 2026 {SITE.legalName}</p>
         </div>
       </div>
     </footer>

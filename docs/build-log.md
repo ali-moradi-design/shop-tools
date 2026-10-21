@@ -127,3 +127,54 @@ What was done in each session, in order. Updated at the end of every step.
   `'unsafe-inline'` (an accepted risk in `docs/security.md` is removed). Unit tests for
   the policy; E2E tests for the nonce, the cache headers and price freshness (9/9).
 - Web image no longer needs the API at build time.
+
+## Steps 5–7: tools domain on the API
+
+- Schema: `Category`, `SpecDefinition` (kind `number|text`, unit family, `filterable`, `better`
+  = which direction wins in a comparison), `ProductSpec` (EAV; `valueNum` is indexed for
+  ranges, `valueText` for words), `ProductVariant` (sku, label, optional own price),
+  `Warehouse`, `StockLevel` (PK warehouse + variant), `OrderItemAllocation`.
+  `Product.stock` stays as a denormalized total and is re-synced after every stock change.
+- Units (`catalog/domain/units.ts`): numbers are stored in a base unit; every unit family
+  has factors (Nm, in·lb, ft·lb …). A filter such as `spec.torque=400..900in·lb` is converted
+  to base units in `parseSpecFilters` before it touches SQL. Unknown keys or units are a 400.
+- Endpoints: `GET /categories`, `GET /categories/:slug`, `GET /warehouses`,
+  `GET /products?category=…&spec.<key>=…&warehouse=…&instock=1`,
+  `GET /products/facets` (ranges, options and counts for the sidebar),
+  `GET /products/compare?slugs=a,b` (2–4 products of one category; each row has `best[]`).
+- Stock per warehouse: paying an order takes units warehouse by warehouse in dispatch order
+  (BER, HAM, MUC) with `SELECT … FOR UPDATE`, inside one transaction together with the
+  payment, and stores where every unit came from (`OrderItemAllocation`).
+- Seed: 500 products generated from the DEWALT catalogue (`scripts/seed/catalog/*`):
+  classification into 11 categories, specs parsed from the product names where possible and
+  generated otherwise, three warehouses with random but reproducible stock.
+- A real bug found on the way: Express 5 made `req.query` a getter, so the validator's
+  `Object.assign(req.query, …)` silently lost every parsed value. `validate()` now redefines
+  the property; there is a test for it.
+
+## Steps 8–10: storefront
+
+- New design (`docs/mockups`): yellow/black "workshop" look, Barlow Condensed + IBM Plex.
+  FSD kept: `entities/category`, `features/catalog-filters` (sidebar with dual range sliders and
+  a unit switch, active filter chips, sort), `features/compare` (tray, toggle, table),
+  `widgets/home`, `widgets/product-detail`. All filter state lives in the URL.
+- Product page shows a spec table and the stock of every warehouse; the buy box picks a variant.
+  The order page shows which warehouse each line shipped from. The admin editor has a stock
+  input per warehouse and variant.
+- A hand-edited URL that the API refuses (`spec.torque=abc`) shows "These filters are not
+  valid" instead of an error page.
+
+## Step 11: E2E and two SSR problems they found
+
+- E2E: purchase (with warehouse display), spec filters with units, compare (best values,
+  max 4, different categories refused), invalid filter URL, accessibility (axe) for home,
+  category, product, login, help, compare; plus the SSR specs (15 tests).
+- **SSR and rate limits:** the storefront calls the API from its own address, so all visitors
+  shared one 300-request budget. Fix: server-side fetches forward the visitor IP
+  (`shared/api/visitor-ip.ts`), and the limit is now `RATE_LIMIT_MAX` (default 1000 per 15
+  minutes); CI lifts it for the E2E run.
+- **Client bundle:** a client component imported the `entities/product` barrel, which now pulls
+  in a server-only module; it imports the two files it needs instead.
+- Contrast: muted text darkened (`#565e66`) to pass WCAG AA on the grey background.
+- The CSP E2E checks the HTML the server sent (every `<script>` carries the nonce) instead of
+  the live DOM, because scripts injected later by the loader get their nonce as a property.

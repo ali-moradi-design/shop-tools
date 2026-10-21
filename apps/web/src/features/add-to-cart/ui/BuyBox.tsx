@@ -3,37 +3,45 @@
 import { useMemo, useState } from 'react';
 import type { ProductVariant } from '@/entities/product/model/types';
 import { useCart } from '@/features/cart';
+import { WAREHOUSE_NAMES } from '@/shared/config';
 import { cn } from '@/shared/lib/cn';
 import { formatMoney } from '@/shared/lib/money';
 
-/** Width toggle, size grid with live stock, and the add-to-cart button. */
+const DISPATCH: Record<string, string> = { BER: 'Same-day dispatch', HAM: 'Next-day', MUC: 'Next-day' };
+
+/** Variant (kit) picker, stock per warehouse for the picked variant, and the add-to-cart button. */
 export function BuyBox({
   productId,
   price,
   variants,
-  sizeNote,
+  warehouses,
 }: {
   productId: string;
   price: number;
   variants: ProductVariant[];
-  sizeNote?: string;
+  /** Every warehouse, in dispatch order (so a warehouse with no stock row still shows up as 0). */
+  warehouses: { code: string; name: string }[];
 }) {
   const { add, busy } = useCart();
-  const widths = useMemo(() => [...new Set(variants.map((v) => v.width).filter(Boolean))] as string[], [variants]);
-  const [width, setWidth] = useState<string | undefined>(widths[0]);
-  const sizes = variants.filter((v) => !widths.length || v.width === width);
-  const oneSize = sizes.length === 1 && sizes[0].size === 'One Size';
-  const [sku, setSku] = useState<string | undefined>(oneSize ? sizes[0].sku : undefined);
-  const [missing, setMissing] = useState(false);
+  const firstInStock = variants.find((v) => v.stock > 0) ?? variants[0];
+  const [sku, setSku] = useState(firstInStock?.sku);
   const [addError, setAddError] = useState<string | null>(null);
-  const selected = variants.find((v) => v.sku === sku);
+  const selected = variants.find((v) => v.sku === sku) ?? variants[0];
   const soldOut = variants.every((v) => v.stock === 0);
+  const unit = selected?.price ?? price;
+
+  const rows = useMemo(
+    () =>
+      warehouses.map((w) => ({
+        ...w,
+        quantity: selected?.stockByWarehouse.find((s) => s.warehouse === w.code)?.quantity ?? 0,
+      })),
+    [warehouses, selected],
+  );
+  const shipsFrom = rows.find((r) => r.quantity > 0);
 
   const onAdd = async () => {
-    if (!selected) {
-      setMissing(true);
-      return;
-    }
+    if (!selected) return;
     setAddError(null);
     await add(productId, selected.sku).catch((err: unknown) =>
       setAddError(err instanceof Error ? err.message : 'Could not add to cart'),
@@ -41,32 +49,12 @@ export function BuyBox({
   };
 
   return (
-    <div>
-      {widths.length > 1 && (
-        <fieldset className="mt-5">
-          <legend className="text-[14.5px]">Width</legend>
-          <div className="mt-2 grid grid-cols-2 border border-line">
-            {widths.map((w) => (
-              <button
-                key={w}
-                type="button"
-                aria-pressed={w === width}
-                onClick={() => { setWidth(w); setSku(undefined); }}
-                className={cn('py-2.5 text-[13px]', w === width && 'bg-ink text-white')}
-              >
-                {w}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-      )}
-      {!oneSize && (
-        <fieldset className="mt-5">
-          <legend className={cn('text-[14.5px]', missing && 'text-danger')}>
-            Size{sizeNote ? `: ${sizeNote}` : ''}
-          </legend>
-          <div className="mt-2.5 grid grid-cols-5 gap-1 sm:grid-cols-10" role="radiogroup" aria-label="Size">
-            {sizes.map((v) => {
+    <div className="space-y-4">
+      {variants.length > 1 && (
+        <fieldset>
+          <legend className="font-display text-[16px] font-bold uppercase tracking-[0.06em]">Option</legend>
+          <div className="mt-1.5 flex flex-wrap gap-2" role="radiogroup" aria-label="Option">
+            {variants.map((v) => {
               const out = v.stock === 0;
               return (
                 <button
@@ -74,37 +62,46 @@ export function BuyBox({
                   type="button"
                   role="radio"
                   aria-checked={v.sku === sku}
-                  aria-label={out ? `${v.size}, sold out` : v.size}
-                  disabled={out}
-                  onClick={() => { setSku(v.sku); setMissing(false); }}
+                  onClick={() => setSku(v.sku)}
                   className={cn(
-                    'h-[50px] border border-line text-[14px]',
-                    v.sku === sku && 'border-ink outline outline-1 outline-ink',
-                    out ? 'cursor-not-allowed text-[#c4c4c4] line-through' : 'hover:border-ink',
+                    'border-2 border-ink px-3.5 py-2 text-left font-mono text-[12px]',
+                    v.sku === sku ? 'bg-ink text-white' : 'bg-white hover:bg-soft',
+                    out && v.sku !== sku && 'text-mute line-through',
                   )}
                 >
-                  {v.size}
+                  {v.label}
+                  {v.price !== undefined && v.price !== price && <span className="ml-2 opacity-70">{formatMoney(v.price)}</span>}
+                  {out && <span className="ml-2 no-underline">· sold out</span>}
                 </button>
               );
             })}
           </div>
         </fieldset>
       )}
-      {missing && (
-        <p role="alert" className="mt-3 border-t border-danger pt-1 text-[13px] text-danger">Please select a size</p>
-      )}
-      {selected && selected.stock > 0 && selected.stock <= 3 && (
-        <p className="mt-3 text-[13px]">Only {selected.stock} left in this size.</p>
-      )}
-      {addError && (
-        <p role="alert" className="mt-3 text-[13px] text-danger">{addError}</p>
-      )}
-      <button type="button" onClick={onAdd} disabled={busy || soldOut} className="btn mt-5 w-full text-[16px]" data-testid="add-to-cart">
-        {soldOut ? 'Sold out' : `Add to cart — ${formatMoney(price)}`}
+
+      <div className="panel" data-testid="warehouse-stock">
+        <div className="flex items-center border-b border-line-soft px-4 py-2.5">
+          <h3 className="font-display text-[16px] font-bold uppercase tracking-[0.06em]">Stock by warehouse</h3>
+          <span className="flex-1" />
+          <span className="font-mono text-[11px] text-mute">UPDATED NOW</span>
+        </div>
+        {rows.map((r) => (
+          <div key={r.code} className="flex items-center gap-3 border-b border-line-soft px-4 py-2.5 last:border-b-0" data-warehouse={r.code}>
+            <span className={r.quantity === 0 ? 'dot dot-out' : r.quantity <= 5 ? 'dot dot-low' : 'dot'} aria-hidden />
+            <b className="w-24">{WAREHOUSE_NAMES[r.code] ?? r.name}</b>
+            <span className="text-[12px] text-steel">{r.quantity > 0 ? DISPATCH[r.code] : 'Not available here'}</span>
+            <span className="flex-1" />
+            <span className="font-mono font-semibold">{r.quantity > 0 ? `${r.quantity} units` : 'Out of stock'}</span>
+          </div>
+        ))}
+      </div>
+
+      {addError && <p role="alert" className="text-[13px] text-danger">{addError}</p>}
+      <button type="button" onClick={onAdd} disabled={busy || soldOut || (selected?.stock ?? 0) === 0} className="btn w-full text-[16px]" data-testid="add-to-cart">
+        {soldOut ? 'Sold out' : (selected?.stock ?? 0) === 0 ? 'This option is sold out' : `Add to cart — ${formatMoney(unit)}`}
       </button>
-      <p className="mt-4 text-center text-[14px]">
-        Free Shipping &amp; Returns
-        <span className="block text-mute">on every order</span>
+      <p className="font-mono text-[12px] text-steel">
+        {shipsFrom ? `▪ Ships from ${shipsFrom.name}` : '▪ Back in stock soon'} &nbsp;▪ 30-day returns &nbsp;▪ 2-year warranty
       </p>
     </div>
   );
@@ -112,12 +109,9 @@ export function BuyBox({
 
 export function BuyBoxSkeleton() {
   return (
-    <div aria-hidden className="mt-5">
-      <div className="h-4 w-40 bg-soft" />
-      <div className="mt-3 grid grid-cols-10 gap-1">
-        {Array.from({ length: 10 }, (_, i) => <div key={i} className="h-[50px] bg-soft" />)}
-      </div>
-      <div className="mt-5 h-11 bg-soft" />
+    <div aria-hidden className="space-y-4">
+      <div className="panel h-40 animate-pulse" />
+      <div className="h-11 animate-pulse bg-line" />
     </div>
   );
 }

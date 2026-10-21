@@ -1,7 +1,18 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-const PAGES = ['/', '/collections/mens-boots', '/products/mens-diplomat-moc-toe-boot-badlands', '/account/login', '/help'];
+const API = process.env.E2E_API_URL ?? 'http://localhost:4000/api/v1';
+
+const PAGES = ['/', '/categories/drills', '/account/login', '/help', '/compare'];
+
+test('no serious accessibility violations on a product page', async ({ page, request }) => {
+  const list = await (await request.get(`${API}/products?category=drills&limit=1`)).json();
+  await page.goto(`/products/${list.data[0].slug}`);
+  await page.waitForLoadState('networkidle');
+  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  const serious = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+});
 
 for (const path of PAGES) {
   test(`no serious accessibility violations on ${path}`, async ({ page }) => {

@@ -1,15 +1,23 @@
 @import "tailwindcss";
 
-/* Welt & Grain: light and monochrome. */
+/* Toolbench: concrete grey, near-black ink, safety yellow. Sharp corners, hairline borders. */
 @theme {
-  --color-ink: #111111;
+  --color-ink: #0f1114;
+  --color-steel: #3b4249;
   --color-paper: #ffffff;
-  --color-soft: #f6f6f6;
-  --color-line: #e3e3e3;
-  --color-mute: #6f6f6f;
-  --color-danger: #b42318;
-  --font-serif: var(--font-source-serif), Georgia, serif;
-  --font-sans: var(--font-jost), system-ui, sans-serif;
+  --color-soft: #eef0f2;
+  --color-line: #c8cdd2;
+  --color-line-soft: #e1e4e7;
+  --color-mute: #565e66;
+  --color-accent: #ffc20e;
+  --color-accent-ink: #1a1400;
+  --color-ok: #1d8a4a;
+  --color-warn: #c76a00;
+  --color-danger: #c62828;
+  --font-display: var(--font-barlow), 'Arial Narrow', sans-serif;
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --radius-*: initial;
 }
 
 :root {
@@ -18,43 +26,80 @@
 
 @layer base {
   body {
-    @apply bg-paper text-ink font-sans antialiased;
-    font-size: 15px;
-    line-height: 1.6;
+    @apply bg-soft text-ink font-sans antialiased;
+    font-size: 14px;
+    line-height: 1.5;
   }
 
   a {
     @apply text-inherit no-underline;
   }
+
+  :focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
+  /* The main action: yellow, hard border, condensed capitals. */
   .btn {
-    @apply inline-flex h-11 items-center justify-center gap-2 bg-ink px-10 text-[13px] font-medium uppercase tracking-[0.16em] text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex h-11 items-center justify-center gap-2 border-2 border-ink bg-accent px-6 font-display text-[15px] font-bold uppercase tracking-[0.1em] text-accent-ink transition-colors hover:bg-ink hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-accent disabled:hover:text-accent-ink;
   }
   .eyebrow {
-    @apply text-[13px] font-medium uppercase tracking-[0.16em];
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.1em];
   }
   .heading {
-    @apply font-serif font-bold;
+    @apply font-display font-bold uppercase tracking-[0.02em];
   }
   .link-underline {
     @apply underline underline-offset-4;
   }
   .container-page {
-    @apply mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[1440px] px-4 sm:px-8;
+  }
+  /* White surface with a hairline border. */
+  .panel {
+    @apply border border-line bg-paper;
+  }
+  .tag {
+    @apply inline-block border border-ink px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em];
+  }
+  .tag-accent {
+    @apply bg-accent text-accent-ink;
+  }
+  .dot {
+    @apply mr-1.5 inline-block h-[9px] w-[9px] bg-ok align-baseline;
+  }
+  .dot-low {
+    @apply bg-warn;
+  }
+  .dot-out {
+    @apply bg-danger;
+  }
+  .field {
+    @apply block w-full border-2 border-ink bg-paper px-3 py-2 outline-none focus:border-accent;
   }
 }
 
 /* Button variants need to win over .btn regardless of rule order. */
-.btn.btn-light {
-  background: var(--color-paper);
-  color: var(--color-ink);
+.btn.btn-dark {
+  background: var(--color-ink);
+  color: #fff;
 }
+.btn.btn-dark:hover {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+.btn.btn-light,
 .btn.btn-outline {
-  border: 1px solid var(--color-ink);
   background: transparent;
   color: var(--color-ink);
+}
+.btn.btn-light:hover,
+.btn.btn-outline:hover {
+  background: var(--color-ink);
+  color: var(--color-accent);
 }
 
 /* Horizontal rails scroll without a visible bar. */
@@ -63,4 +108,43 @@
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* Two thumbs on one track: only the thumbs take the pointer. */
+.dual-range {
+  position: relative;
+  height: 22px;
+}
+.dual-range input[type='range'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;
+  appearance: none;
+}
+.dual-range input[type='range']::-webkit-slider-thumb {
+  pointer-events: auto;
+  appearance: none;
+  width: 16px;
+  height: 18px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-accent);
+  cursor: grab;
+}
+.dual-range input[type='range']::-moz-range-thumb {
+  pointer-events: auto;
+  width: 12px;
+  height: 14px;
+  border: 2px solid var(--color-ink);
+  border-radius: 0;
+  background: var(--color-accent);
+  cursor: grab;
+}
+.dual-range input[type='range']::-webkit-slider-runnable-track {
+  background: transparent;
+}
+.dual-range input[type='range']::-moz-range-track {
+  background: transparent;
 }
