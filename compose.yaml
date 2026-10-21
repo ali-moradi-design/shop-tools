@@ -1,5 +1,28 @@
-# Local development database. Production compose lives on the server (roadmap phase 8).
+# Local development databases. MongoDB is removed once the API runs on MySQL.
+# Production compose lives in deploy/.
 services:
+  mysql:
+    image: mysql:8.4 # pinned minor line; bump deliberately
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --innodb-buffer-pool-size=128M
+      - --performance-schema=OFF
+      - --skip-name-resolve
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: toolbench
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 512m
+
   mongo:
     image: mongo:8.2.6 # pinned: 8.3 refuses to start on Linux 6.19+ (SERVER-121912)
     command: ["--wiredTigerCacheSizeGB", "0.25"]
@@ -15,4 +38,5 @@ services:
     mem_limit: 512m
 
 volumes:
+  mysql-data:
   mongo-data:

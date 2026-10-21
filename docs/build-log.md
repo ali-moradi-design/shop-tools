@@ -61,3 +61,27 @@ What was done in each session, in order. Updated at the end of every step.
   (`OUT_DIR` can redirect the output).
 - Note for the seed (step 12): the generated products pick their photo from the
   manifest by category; names, specs and prices stay generated.
+
+## Step 2: MySQL foundation
+
+- Plan change (explained): the copied Mongo models use `ObjectId` references, so
+  moving module by module would need throw-away changes on the Mongo side. The
+  switch is therefore two PRs: this foundation, then one PR that moves every
+  repository (contract tests are the oracle) and removes MongoDB.
+- Prisma 6.19.3 (same line as `nodejs-bookshop-ddd-mysql`), MySQL 8.4.
+- `apps/api/prisma/schema.prisma`: the full relational model with the current
+  (leather) product fields so the API contract stays identical for now.
+  Money is `Int` in minor units (the reference repo used `Float`, not copied).
+  String arrays (images, tags, features) are JSON columns.
+  Cart, order and order lines are tables; the order status history is a table.
+- Migration `init` applied. Collation `utf8mb4_unicode_ci` (case-insensitive,
+  so `LIKE` search and e-mail uniqueness ignore case).
+- `src/shared/infra/prisma/client.ts`: one client plus `getPrisma()` which
+  returns the transaction client while a unit of work is running
+  (`AsyncLocalStorage`); `PrismaUnitOfWork` for `IUnitOfWork`.
+- Tests: `tests/global-setup.ts` drops/creates `toolbench_test` and runs
+  `prisma migrate deploy` once per run (name must end with `_test`); a new
+  integration test checks the tables and a commit / rollback.
+- `compose.yaml`: MySQL (small buffer pool, `performance_schema` off, 512 MB) next
+  to the old MongoDB. CI: MySQL service in the API job. Dockerfile copies the
+  Prisma schema before install (the client is generated in `postinstall`).
