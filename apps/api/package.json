@@ -1,0 +1,67 @@
+{
+  "name": "@st/api",
+  "version": "1.0.0",
+  "description": "Welt & Grain API \u2014 modular monolith (Express, MongoDB)",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc && tsc-alias -p tsconfig.json",
+    "start": "node dist/server.js",
+    "lint": "eslint \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\"",
+    "format": "prettier --write \"src/**/*.{ts,js,json}\" \"*.md\"",
+    "seed": "tsx src/scripts/seed.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "reset-demo": "tsx src/scripts/reset-demo.ts",
+    "reset-demo:prod": "node dist/scripts/reset-demo.js",
+    "seed:prod": "node dist/scripts/seed.js"
+  },
+  "keywords": [
+    "bookstore",
+    "express",
+    "mongoose",
+    "typescript"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.1",
+    "morgan": "^1.12.1",
+    "multer": "^2.4.0",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^26.6.0",
+    "@types/supertest": "^7.2.1",
+    "@types/swagger-ui-express": "^4.1.8",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "mongodb-memory-server": "^11.2.0",
+    "prettier": "^3.9.6",
+    "supertest": "^7.2.2",
+    "tsc-alias": "^1.9.5",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^4.1.12"
+  }
+}

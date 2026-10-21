@@ -1,0 +1,69 @@
+# Production stack for /srv/apps/leather-shop/compose.yaml (roadmap phase 8).
+# Images are built in CI and pulled here; secrets live in .env next to this file.
+name: leather-shop
+
+services:
+  mongo:
+    image: mongo:8.2.6 # pinned: 8.3 refuses to start on Linux 6.19+ (SERVER-121912)
+    command: ["--wiredTigerCacheSizeGB", "0.25", "--auth"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    networks: [backend]
+    # no published ports: only the API reaches the database
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+    restart: unless-stopped
+
+  api:
+    image: ghcr.io/ali-moradi-design/leather-shop-api:${TAG:-latest}
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongo:27017/leather?authSource=admin
+      CORS_ORIGIN: https://shop-leather.ali-moradi-develop.com
+      # one proxy hop in front of the API: the storefront's /api route
+      TRUST_PROXY: 1
+      WEB_REVALIDATE_URL: http://web:3000/hooks/revalidate
+    volumes:
+      - uploads:/app/uploads
+    networks: [backend, frontend]
+    depends_on:
+      mongo:
+        condition: service_healthy
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 384m
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/ali-moradi-design/leather-shop-web:${TAG:-latest}
+    environment:
+      API_URL: http://api:4000
+      NEXT_PUBLIC_SITE_URL: https://shop-leather.ali-moradi-develop.com
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET}
+    # Nginx on the host proxies to this; Docker bypasses ufw, so bind to localhost only
+    ports:
+      - "127.0.0.1:3104:3000"
+    networks: [frontend]
+    depends_on: [api]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 384m
+    restart: unless-stopped
+
+networks:
+  backend:
+    internal: true
+  frontend: {}
+
+volumes:
+  mongo-data:
+  uploads:

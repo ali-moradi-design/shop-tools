@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API (lint, build, test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build
+      # integration tests start their own MongoDB (mongodb-memory-server)
+      - run: pnpm test
+
+  web:
+    name: Web (lint, typecheck, unit tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  e2e:
+    name: E2E (purchase path + axe)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mongo:
+        image: mongo:8.2.6 # pinned: 8.3 refuses to start on Linux 6.19+ (SERVER-121912)
+        ports: ['27017:27017']
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/leather
+      JWT_ACCESS_SECRET: ci-access-secret-min-8
+      JWT_REFRESH_SECRET: ci-refresh-secret-min-8
+      CORS_ORIGIN: http://localhost:3000
+      # development mode: plain-http cookies and no rate limit for the test run
+      NODE_ENV: development
+      API_URL: http://localhost:4000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      REVALIDATE_SECRET: ci-revalidate-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Seed and start the API
+        working-directory: apps/api
+        run: |
+          pnpm build
+          pnpm seed
+          nohup node dist/server.js > api.log 2>&1 &
+          npx --yes wait-on@8 -t 60000 http://localhost:4000/api/health
+      - name: Build and start the web app
+        working-directory: apps/web
+        run: |
+          # prerendering reads the catalog from the API
+          NODE_ENV=production pnpm build
+          NODE_ENV=production nohup pnpm start -p 3000 > web.log 2>&1 &
+          npx --yes wait-on@8 -t 60000 http://localhost:3000
+      - name: Install Chromium
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run E2E
+        working-directory: apps/web
+        run: pnpm e2e
+        env:
+          CI: 'true'
+      - name: Upload report and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+            apps/api/api.log
+            apps/web/web.log
+          retention-days: 7
+
+  ci:
+    name: ci
+    # the single required check for branch protection
+    if: always()
+    needs: [api, web, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All jobs passed
+        run: |
+          [ "${{ needs.api.result }}" = success ] && [ "${{ needs.web.result }}" = success ] && [ "${{ needs.e2e.result }}" = success ]
