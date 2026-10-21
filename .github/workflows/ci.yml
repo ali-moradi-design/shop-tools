@@ -43,7 +43,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build
-      # integration tests start their own MongoDB (mongodb-memory-server)
+      # the tests rebuild the *_test database from the real migrations
       - run: pnpm test
 
   web:
@@ -70,14 +70,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
-      mongo:
-        image: mongo:8.2.6 # pinned: 8.3 refuses to start on Linux 6.19+ (SERVER-121912)
-        ports: ['27017:27017']
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: toolbench
+        ports: ['3306:3306']
         options: >-
-          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
-          --health-interval 5s --health-timeout 5s --health-retries 10
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
-      MONGODB_URI: mongodb://127.0.0.1:27017/leather
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/toolbench
       JWT_ACCESS_SECRET: ci-access-secret-min-8
       JWT_REFRESH_SECRET: ci-refresh-secret-min-8
       CORS_ORIGIN: http://localhost:3000
@@ -98,6 +101,7 @@ jobs:
         working-directory: apps/api
         run: |
           pnpm build
+          pnpm migrate
           pnpm seed
           nohup node dist/server.js > api.log 2>&1 &
           npx --yes wait-on@8 -t 60000 http://localhost:4000/api/health
@@ -128,13 +132,22 @@ jobs:
             apps/web/web.log
           retention-days: 7
 
+  api-image:
+    name: API image (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # proves the Dockerfile still builds (Prisma client generation, OpenSSL); nothing is pushed
+      - run: docker build -f apps/api/Dockerfile -t shop-tools-api:ci .
+
   ci:
     name: ci
     # the single required check for branch protection
     if: always()
-    needs: [api, web, e2e]
+    needs: [api, web, e2e, api-image]
     runs-on: ubuntu-latest
     steps:
       - name: All jobs passed
         run: |
-          [ "${{ needs.api.result }}" = success ] && [ "${{ needs.web.result }}" = success ] && [ "${{ needs.e2e.result }}" = success ]
+          [ "${{ needs.api.result }}" = success ] && [ "${{ needs.web.result }}" = success ] && [ "${{ needs.e2e.result }}" = success ] && [ "${{ needs.api-image.result }}" = success ]

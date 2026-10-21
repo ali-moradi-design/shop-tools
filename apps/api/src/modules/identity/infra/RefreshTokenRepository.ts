@@ -1,38 +1,28 @@
 import type { IRefreshTokenRepository } from '@modules/identity/domain/refresh-token.repository';
 import type { RefreshTokenRecord } from '@modules/identity/domain/auth.types';
-import { RefreshTokenModel } from './models/RefreshTokenModel';
+import { getPrisma } from '@shared/infra/prisma/client';
 import { mapRefreshToken } from './mappers';
 
-export class MongooseRefreshTokenRepository implements IRefreshTokenRepository {
+export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
   async create(data: {
     userId: string;
     tokenHash: string;
     expiresAt: Date;
   }): Promise<RefreshTokenRecord> {
-    const doc = await RefreshTokenModel.create({
-      user: data.userId,
-      tokenHash: data.tokenHash,
-      expiresAt: data.expiresAt,
-    });
-    return mapRefreshToken(doc);
+    return mapRefreshToken(await getPrisma().refreshToken.create({ data }));
   }
 
   async findValidByHash(tokenHash: string): Promise<RefreshTokenRecord | null> {
-    const doc = await RefreshTokenModel.findOne({
-      tokenHash,
-      revokedAt: null,
-      expiresAt: { $gt: new Date() },
+    const row = await getPrisma().refreshToken.findFirst({
+      where: { tokenHash, revokedAt: null, expiresAt: { gt: new Date() } },
     });
-    return doc ? mapRefreshToken(doc) : null;
+    return row ? mapRefreshToken(row) : null;
   }
 
   async revoke(tokenHash: string, replacedByHash?: string): Promise<void> {
-    await RefreshTokenModel.findOneAndUpdate(
-      { tokenHash, revokedAt: null },
-      {
-        revokedAt: new Date(),
-        ...(replacedByHash ? { replacedByHash } : {}),
-      },
-    );
+    await getPrisma().refreshToken.updateMany({
+      where: { tokenHash, revokedAt: null },
+      data: { revokedAt: new Date(), ...(replacedByHash ? { replacedByHash } : {}) },
+    });
   }
 }

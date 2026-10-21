@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { AppError } from '../../errors/AppError';
 import { DomainError } from '../../domain/DomainError';
 import { domainToAppError } from '../../errors/mapDomainError';
@@ -38,18 +39,19 @@ export function errorHandler(
     return;
   }
 
-  if (
-    typeof appErr === 'object' &&
-    appErr !== null &&
-    'code' in appErr &&
-    (appErr as { code: number }).code === 11000
-  ) {
-    res.status(409).json({
-      message: 'Duplicate key',
-      errors: (appErr as { keyValue?: unknown }).keyValue,
-      ...(requestId ? { requestId } : {}),
-    });
-    return;
+  if (appErr instanceof Prisma.PrismaClientKnownRequestError) {
+    // P2002: a unique value already exists; P2025: the row to change is gone;
+    // P2003: a reference points at a row that does not exist
+    const status = { P2002: 409, P2025: 404, P2003: 409 }[appErr.code];
+    if (status) {
+      const message = { 409: 'Duplicate or conflicting value', 404: 'Not found' }[status] ?? 'Error';
+      res.status(status).json({
+        message: appErr.code === 'P2002' ? 'Duplicate key' : message,
+        ...(appErr.code === 'P2002' ? { errors: appErr.meta?.target } : {}),
+        ...(requestId ? { requestId } : {}),
+      });
+      return;
+    }
   }
 
   logger.error('unhandled_error', {

@@ -7,4 +7,6 @@ export interface ICartRepository {
   setItems(owner: string, items: CartItem[]): Promise<Cart>;
   clear(owner: string): Promise<Cart | null>;
   delete(owner: string): Promise<void>;
+  /** Removes guest carts nobody touched since `before`; returns how many. */
+  purgeStaleGuestCarts(before: Date): Promise<number>;
 }

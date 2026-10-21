@@ -1,6 +1,6 @@
-import { MongooseReviewRepository } from './ReviewRepository';
+import { PrismaReviewRepository } from './ReviewRepository';
 import { ReviewService } from '../application/review.service';
 import { productRepo } from '../../catalog';
 
-export const reviewRepo = new MongooseReviewRepository();
+export const reviewRepo = new PrismaReviewRepository();
 export const reviewService = new ReviewService(reviewRepo, productRepo);

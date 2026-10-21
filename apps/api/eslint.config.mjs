@@ -73,8 +73,8 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['express', 'express/*', 'mongoose', 'mongoose/*'],
-              message: 'Domain must not import express or mongoose',
+              group: ['express', 'express/*', '@prisma/client', '@prisma/client/*'],
+              message: 'Domain must not import express or the database client',
             },
             ...otherInternals(moduleName),
           ],
@@ -90,8 +90,8 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['express', 'express/*', 'mongoose', 'mongoose/*'],
-              message: 'Domain must not import express or mongoose',
+              group: ['express', 'express/*', '@prisma/client', '@prisma/client/*'],
+              message: 'Domain must not import express or the database client',
             },
           ],
         },

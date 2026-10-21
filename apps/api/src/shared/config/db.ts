@@ -1,10 +1,7 @@
-import mongoose from 'mongoose';
-import { env } from './env';
+import { prisma } from '../infra/prisma/client';
 
+/** Opens the MySQL connection pool now, so a wrong DATABASE_URL fails at start-up. */
 export async function connectDb(): Promise<void> {
-  mongoose.set('strictQuery', true);
-  await mongoose.connect(env.MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,
-  });
-  console.log('MongoDB connected');
+  await prisma.$connect();
+  console.log('MySQL connected');
 }

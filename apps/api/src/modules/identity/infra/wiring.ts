@@ -1,7 +1,7 @@
-import { MongooseUserRepository } from './UserRepository';
-import { MongooseRoleRepository } from './RoleRepository';
-import { MongoosePermissionRepository } from './PermissionRepository';
-import { MongooseRefreshTokenRepository } from './RefreshTokenRepository';
+import { PrismaUserRepository } from './UserRepository';
+import { PrismaRoleRepository } from './RoleRepository';
+import { PrismaPermissionRepository } from './PermissionRepository';
+import { PrismaRefreshTokenRepository } from './RefreshTokenRepository';
 import { JwtTokenService } from './token.service';
 import { BcryptPasswordHasher } from './password.service';
 import { AuthService } from '../application/auth.service';
@@ -10,10 +10,10 @@ import { PermissionService } from '../application/permission.service';
 import { RoleService } from '../application/role.service';
 import { AuthContextService } from '../application/auth-context.service';
 
-export const userRepo = new MongooseUserRepository();
-export const roleRepo = new MongooseRoleRepository();
-export const permissionRepo = new MongoosePermissionRepository();
-export const refreshTokenRepo = new MongooseRefreshTokenRepository();
+export const userRepo = new PrismaUserRepository();
+export const roleRepo = new PrismaRoleRepository();
+export const permissionRepo = new PrismaPermissionRepository();
+export const refreshTokenRepo = new PrismaRefreshTokenRepository();
 export const tokenService = new JwtTokenService();
 export const passwordHasher = new BcryptPasswordHasher();
 

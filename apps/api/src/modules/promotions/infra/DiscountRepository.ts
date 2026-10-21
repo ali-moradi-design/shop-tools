@@ -4,55 +4,66 @@ import type {
   CreateDiscountInput,
   UpdateDiscountInput,
 } from '@modules/promotions/domain/discount.entity';
-import { DiscountModel } from './models/DiscountModel';
+import { getPrisma } from '@shared/infra/prisma/client';
+import { isNotFound } from '@shared/infra/prisma/errors';
 import { mapDiscount } from './mappers';
 
-export class MongooseDiscountRepository implements IDiscountRepository {
+const live = { deletedAt: null } as const;
+
+export class PrismaDiscountRepository implements IDiscountRepository {
   async findById(id: string): Promise<Discount | null> {
-    const doc = await DiscountModel.findById(id);
-    return doc ? mapDiscount(doc) : null;
+    const row = await getPrisma().discount.findFirst({ where: { id, ...live } });
+    return row ? mapDiscount(row) : null;
   }
 
   async findByCode(code: string): Promise<Discount | null> {
-    const doc = await DiscountModel.findOne({ code: code.toUpperCase() });
-    return doc ? mapDiscount(doc) : null;
+    const row = await getPrisma().discount.findFirst({ where: { code: code.toUpperCase(), ...live } });
+    return row ? mapDiscount(row) : null;
   }
 
   async list(): Promise<Discount[]> {
-    const docs = await DiscountModel.find().sort({ createdAt: -1 });
-    return docs.map(mapDiscount);
+    const rows = await getPrisma().discount.findMany({
+      where: live,
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map(mapDiscount);
   }
 
   async create(input: CreateDiscountInput): Promise<Discount> {
-    const doc = await DiscountModel.create({
-      ...input,
-      code: input.code.toUpperCase(),
-      usedCount: 0,
-      isActive: input.isActive ?? true,
+    const row = await getPrisma().discount.create({
+      data: {
+        ...input,
+        code: input.code.trim().toUpperCase(),
+        isActive: input.isActive ?? true,
+      },
     });
-    return mapDiscount(doc);
+    return mapDiscount(row);
   }
 
   async update(id: string, input: UpdateDiscountInput): Promise<Discount | null> {
-    const updates: Record<string, unknown> = { ...input };
-    if (input.code) updates.code = input.code.toUpperCase();
-    const doc = await DiscountModel.findByIdAndUpdate(id, updates, {
-      returnDocument: 'after',
-      runValidators: true,
+    const existing = await this.findById(id);
+    if (!existing) return null;
+    const row = await getPrisma().discount.update({
+      where: { id },
+      data: { ...input, ...(input.code ? { code: input.code.trim().toUpperCase() } : {}) },
     });
-    return doc ? mapDiscount(doc) : null;
+    return mapDiscount(row);
   }
 
   async softDelete(id: string): Promise<Discount | null> {
-    const doc = await DiscountModel.findByIdAndUpdate(
-      id,
-      { deletedAt: new Date(), isActive: false },
-      { returnDocument: 'after' },
-    );
-    return doc ? mapDiscount(doc) : null;
+    try {
+      const row = await getPrisma().discount.update({
+        where: { id },
+        data: { deletedAt: new Date(), isActive: false },
+      });
+      return mapDiscount(row);
+    } catch (err) {
+      if (isNotFound(err)) return null;
+      throw err;
+    }
   }
 
   async incrementUsedCount(id: string): Promise<void> {
-    await DiscountModel.updateOne({ _id: id }, { $inc: { usedCount: 1 } });
+    await getPrisma().discount.update({ where: { id }, data: { usedCount: { increment: 1 } } });
   }
 }

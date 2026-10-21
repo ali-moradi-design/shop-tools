@@ -4,61 +4,70 @@ import type {
   CreateIssueInput,
   UpdateIssueInput,
 } from '@modules/reporting/domain/report.entity';
-import { IssueReportModel } from './models/IssueReportModel';
+import { getPrisma } from '@shared/infra/prisma/client';
 import { mapIssue } from './mappers';
 
-export class MongooseIssueReportRepository implements IIssueReportRepository {
+const include = { reporter: { select: { name: true, email: true } } } as const;
+const live = { deletedAt: null } as const;
+
+export class PrismaIssueReportRepository implements IIssueReportRepository {
   async findById(id: string, populate = false): Promise<IssueReport | null> {
-    let q = IssueReportModel.findById(id);
-    if (populate) q = q.populate('reporter', 'name email');
-    const doc = await q;
-    return doc ? mapIssue(doc) : null;
+    const row = await getPrisma().issueReport.findFirst({ where: { id, ...live }, include });
+    return row ? mapIssue(row, populate) : null;
   }
 
-  async list(
-    filter: { reporterId?: string },
-    populate = false,
-  ): Promise<IssueReport[]> {
-    const q: Record<string, unknown> = {};
-    if (filter.reporterId) q.reporter = filter.reporterId;
-    let query = IssueReportModel.find(q).sort({ createdAt: -1 });
-    if (populate) query = query.populate('reporter', 'name email');
-    const docs = await query;
-    return docs.map(mapIssue);
+  async list(filter: { reporterId?: string }, populate = false): Promise<IssueReport[]> {
+    const rows = await getPrisma().issueReport.findMany({
+      where: { ...live, ...(filter.reporterId ? { reporterId: filter.reporterId } : {}) },
+      orderBy: { createdAt: 'desc' },
+      include,
+    });
+    return rows.map((r) => mapIssue(r, populate));
   }
 
   async create(input: CreateIssueInput): Promise<IssueReport> {
-    const doc = await IssueReportModel.create({
-      reporter: input.reporter,
-      type: input.type,
-      targetId: input.targetId,
-      subject: input.subject,
-      body: input.body,
-      status: 'open',
+    const row = await getPrisma().issueReport.create({
+      data: {
+        reporterId: input.reporter,
+        type: input.type,
+        targetId: input.targetId,
+        subject: input.subject,
+        body: input.body,
+        status: 'open',
+      },
+      include,
     });
-    return mapIssue(doc);
+    return mapIssue(row, false);
   }
 
   async update(id: string, input: UpdateIssueInput): Promise<IssueReport | null> {
-    const doc = await IssueReportModel.findById(id);
-    if (!doc) return null;
-    if (input.status !== undefined) doc.status = input.status;
-    if (input.adminNotes !== undefined) doc.adminNotes = input.adminNotes;
-    if (input.subject !== undefined) doc.subject = input.subject;
-    if (input.body !== undefined) doc.body = input.body;
-    await doc.save();
-    return mapIssue(doc);
+    const existing = await this.findById(id);
+    if (!existing) return null;
+    const row = await getPrisma().issueReport.update({
+      where: { id },
+      data: {
+        status: input.status,
+        adminNotes: input.adminNotes,
+        subject: input.subject,
+        body: input.body,
+      },
+      include,
+    });
+    return mapIssue(row, false);
   }
 
   async softDelete(id: string): Promise<IssueReport | null> {
-    const doc = await IssueReportModel.findById(id);
-    if (!doc) return null;
-    doc.deletedAt = new Date();
-    await doc.save();
-    return mapIssue(doc);
+    const existing = await this.findById(id);
+    if (!existing) return null;
+    const row = await getPrisma().issueReport.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+      include,
+    });
+    return mapIssue(row, false);
   }
 
   async countOpen(): Promise<number> {
-    return IssueReportModel.countDocuments({ status: 'open' });
+    return getPrisma().issueReport.count({ where: { ...live, status: 'open' } });
   }
 }

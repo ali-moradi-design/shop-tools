@@ -1,33 +1,36 @@
 import type { IFavoriteRepository } from '@modules/engagement/domain/favorite.repository';
 import type { Favorite, CreateFavoriteInput } from '@modules/engagement/domain/favorite.entity';
-import { FavoriteModel } from './models/FavoriteModel';
+import { getPrisma } from '@shared/infra/prisma/client';
 import { mapFavorite } from './mappers';
 
-export class MongooseFavoriteRepository implements IFavoriteRepository {
+const include = { product: true } as const;
+
+export class PrismaFavoriteRepository implements IFavoriteRepository {
   async listByUser(userId: string, populate = true): Promise<Favorite[]> {
-    let q = FavoriteModel.find({ userId }).sort({ createdAt: -1 });
-    if (populate) {
-      q = q.populate('productId', 'title slug price images');
-    }
-    const docs = await q;
-    return docs.map(mapFavorite);
+    const rows = await getPrisma().favorite.findMany({
+      // a favorite of a product that was removed from the shop is not shown
+      where: { userId, product: { deletedAt: null } },
+      orderBy: { createdAt: 'desc' },
+      include,
+    });
+    return rows.map((r) => mapFavorite(r, populate));
   }
 
   async findByUserAndProduct(userId: string, productId: string): Promise<Favorite | null> {
-    const doc = await FavoriteModel.findOne({ userId, productId });
-    return doc ? mapFavorite(doc) : null;
+    const row = await getPrisma().favorite.findUnique({
+      where: { userId_productId: { userId, productId } },
+      include,
+    });
+    return row ? mapFavorite(row, false) : null;
   }
 
   async create(input: CreateFavoriteInput): Promise<Favorite> {
-    const doc = await FavoriteModel.create({
-      userId: input.userId,
-      productId: input.productId,
-    });
-    return mapFavorite(doc);
+    const row = await getPrisma().favorite.create({ data: input, include });
+    return mapFavorite(row, false);
   }
 
   async deleteByUserAndProduct(userId: string, productId: string): Promise<boolean> {
-    const result = await FavoriteModel.deleteOne({ userId, productId });
-    return result.deletedCount === 1;
+    const { count } = await getPrisma().favorite.deleteMany({ where: { userId, productId } });
+    return count === 1;
   }
 }

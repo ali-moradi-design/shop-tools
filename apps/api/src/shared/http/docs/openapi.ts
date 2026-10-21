@@ -18,7 +18,7 @@ export const openApiSpec = {
   info: {
   "title": "Welt & Grain API",
   "version": "2.0.0",
-  "description": "Leather shop API (Express 5 + MongoDB, modular monolith). Products are one style in one color with per-size variants and stock; all money is in minor units (cents). Auth: Bearer header or httpOnly cookies. Visitors get a guest cart (httpOnly guestCart cookie) that is merged at sign-in. Cookie-authenticated writes must come from an allowed origin (CORS_ORIGIN). Business routes are under /api/v1."
+  "description": "Tools shop API (Express 5 + MySQL, modular monolith). Products are one style in one color with per-size variants and stock (reworked for tools in later steps); all money is in minor units (cents). Auth: Bearer header or httpOnly cookies. Visitors get a guest cart (httpOnly guestCart cookie) that is merged at sign-in. Cookie-authenticated writes must come from an allowed origin (CORS_ORIGIN). Business routes are under /api/v1."
 },
   servers: [
   {

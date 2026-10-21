@@ -1,68 +1,99 @@
 import type { IRoleRepository } from '@modules/identity/domain/rbac.repository';
 import type { Role, CreateRoleInput, UpdateRoleInput } from '@modules/identity/domain/role.entity';
-import { RoleModel } from './models/RoleModel';
+import { getPrisma } from '@shared/infra/prisma/client';
+import { isNotFound } from '@shared/infra/prisma/errors';
 import { mapRole } from './mappers';
 
-export class MongooseRoleRepository implements IRoleRepository {
+const withPermissions = { permissions: { include: { permission: true } } } as const;
+
+const links = (ids: string[]) => ids.map((permissionId) => ({ permissionId }));
+const normalize = (name: string) => name.trim().toLowerCase();
+
+export class PrismaRoleRepository implements IRoleRepository {
   async findById(id: string, populate = false): Promise<Role | null> {
-    let q = RoleModel.findById(id);
-    if (populate) q = q.populate('permissions');
-    const doc = await q;
-    return doc ? mapRole(doc) : null;
+    const row = await getPrisma().role.findUnique({ where: { id }, include: withPermissions });
+    return row ? mapRole(row, populate) : null;
   }
 
   async findByName(name: string): Promise<Role | null> {
-    const doc = await RoleModel.findOne({ name });
-    return doc ? mapRole(doc) : null;
+    const row = await getPrisma().role.findUnique({
+      where: { name: normalize(name) },
+      include: withPermissions,
+    });
+    return row ? mapRole(row, false) : null;
   }
 
   async findByIds(ids: string[], populate = false): Promise<Role[]> {
-    let q = RoleModel.find({ _id: { $in: ids } });
-    if (populate) q = q.populate('permissions');
-    const docs = await q;
-    return docs.map(mapRole);
+    const rows = await getPrisma().role.findMany({
+      where: { id: { in: ids } },
+      include: withPermissions,
+    });
+    return rows.map((r) => mapRole(r, populate));
   }
 
   async list(populate = false): Promise<Role[]> {
-    let q = RoleModel.find().sort({ name: 1 });
-    if (populate) q = q.populate('permissions');
-    const docs = await q;
-    return docs.map(mapRole);
+    const rows = await getPrisma().role.findMany({
+      orderBy: { name: 'asc' },
+      include: withPermissions,
+    });
+    return rows.map((r) => mapRole(r, populate));
   }
 
   async create(input: CreateRoleInput): Promise<Role> {
-    const doc = await RoleModel.create({
-      name: input.name,
-      description: input.description,
-      permissions: input.permissions ?? [],
+    const row = await getPrisma().role.create({
+      data: {
+        name: normalize(input.name),
+        description: input.description,
+        permissions: { create: links(input.permissions ?? []) },
+      },
+      include: withPermissions,
     });
-    await doc.populate('permissions');
-    return mapRole(doc);
+    return mapRole(row, true);
   }
 
   async update(id: string, input: UpdateRoleInput): Promise<Role | null> {
-    const doc = await RoleModel.findByIdAndUpdate(id, input, {
-      returnDocument: 'after',
-      runValidators: true,
-    }).populate('permissions');
-    return doc ? mapRole(doc) : null;
+    try {
+      const row = await getPrisma().role.update({
+        where: { id },
+        data: {
+          name: input.name === undefined ? undefined : normalize(input.name),
+          description: input.description,
+          ...(input.permissions
+            ? { permissions: { deleteMany: {}, create: links(input.permissions) } }
+            : {}),
+        },
+        include: withPermissions,
+      });
+      return mapRole(row, true);
+    } catch (err) {
+      if (isNotFound(err)) return null;
+      throw err;
+    }
   }
 
   async remove(id: string): Promise<Role | null> {
-    const doc = await RoleModel.findByIdAndDelete(id);
-    return doc ? mapRole(doc) : null;
+    const existing = await this.findById(id);
+    if (!existing) return null;
+    await getPrisma().role.delete({ where: { id } });
+    return existing;
   }
 
   async upsertByName(name: string, input: CreateRoleInput): Promise<Role> {
-    const doc = await RoleModel.findOneAndUpdate(
-      { name },
-      {
-        name: input.name,
+    const key = normalize(name);
+    const row = await getPrisma().role.upsert({
+      where: { name: key },
+      create: {
+        name: normalize(input.name),
         description: input.description,
-        permissions: input.permissions ?? [],
+        permissions: { create: links(input.permissions ?? []) },
       },
-      { upsert: true, returnDocument: 'after' },
-    );
-    return mapRole(doc!);
+      update: {
+        name: normalize(input.name),
+        description: input.description,
+        permissions: { deleteMany: {}, create: links(input.permissions ?? []) },
+      },
+      include: withPermissions,
+    });
+    return mapRole(row, false);
   }
 }

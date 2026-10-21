@@ -2,9 +2,8 @@
 
 Work in progress: the tools shop (technical specs, spec filters, compare, stock
 per warehouse) for a portfolio. It starts from a plain copy of `leather-shop`
-(no history); the database is moving to MySQL and the storefront to SSR.
-Until those steps are merged, the code below still describes the copied state
-(Express + MongoDB API, Next.js with PPR).
+(no history); the API now runs on MySQL; the storefront is still the copied one
+(Next.js with PPR) until the SSR step is merged.
 
 Scope and decisions: [docs/brief.md](docs/brief.md). Progress: [docs/build-log.md](docs/build-log.md).
 Security review inherited from the copy: [docs/security.md](docs/security.md).
@@ -15,10 +14,11 @@ Needs Node 22, pnpm 10 and Docker.
 
 ```bash
 pnpm install
-docker compose up -d                      # MongoDB on 127.0.0.1:27017
+docker compose up -d                      # MySQL on 127.0.0.1:3306
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
-pnpm --filter @st/api seed                # 480 products, demo accounts, reviews
+pnpm --filter @st/api migrate             # create the tables
+pnpm --filter @st/api seed                # demo products, accounts, reviews
 pnpm dev:api                              # http://localhost:4000 (docs: /api/docs)
 pnpm dev:web                              # http://localhost:3000
 ```
@@ -39,7 +39,7 @@ pnpm --filter @st/web e2e                  # against the running API + web build
 ```
 
 CI (`.github/workflows/ci.yml`) runs the API checks, the web checks and the E2E
-suite against a real MongoDB; the `ci` job is the single required check.
+suite against a real MySQL; the `ci` job is the single required check.
 
 ## Production notes
 

@@ -1,83 +1,63 @@
-import type { Order, OrderItem } from '../domain/order.entity';
+import type { Prisma } from '@prisma/client';
+import type { Order } from '../domain/order.entity';
 import type { Cart } from '../domain/cart.entity';
 
-function idOf(doc: { id?: string; _id?: { toString(): string } }): string {
-  return doc.id ?? doc._id!.toString();
-}
+export type OrderRow = Prisma.OrderGetPayload<{ include: { items: true; history: true } }>;
+export type CartRow = Prisma.CartGetPayload<{ include: { items: true } }>;
 
-export function mapOrder(doc: {
-  id?: string;
-  _id?: { toString(): string };
-  user: { toString(): string };
-  items: {
-    product: { toString(): string };
-    sku: string;
-    size: string;
-    width?: string;
-    title: string;
-    image?: string;
-    price: number;
-    quantity: number;
-  }[];
-  subtotalAmount?: number;
-  discountCode?: string;
-  discountAmount?: number;
-  totalAmount: number;
-  status: Order['status'];
-  payment: Order['payment'];
-  shippingAddress: Order['shippingAddress'];
-  statusHistory: Order['statusHistory'];
-  deletedAt?: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): Order {
-  const items: OrderItem[] = doc.items.map((i) => ({
-    product: i.product.toString(),
-    sku: i.sku,
-    size: i.size,
-    width: i.width,
-    title: i.title,
-    image: i.image,
-    price: i.price,
-    quantity: i.quantity,
-  }));
-  const discountAmount = doc.discountAmount ?? 0;
-  const subtotalAmount = doc.subtotalAmount ?? doc.totalAmount + discountAmount;
+export function mapOrder(row: OrderRow): Order {
   return {
-    id: idOf(doc),
-    user: doc.user.toString(),
-    items,
-    subtotalAmount,
-    discountCode: doc.discountCode,
-    discountAmount,
-    totalAmount: doc.totalAmount,
-    status: doc.status,
-    payment: doc.payment,
-    shippingAddress: doc.shippingAddress,
-    statusHistory: doc.statusHistory,
-    deletedAt: doc.deletedAt,
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
+    id: row.id,
+    user: row.userId,
+    items: [...row.items]
+      .sort((a, b) => a.position - b.position)
+      .map((i) => ({
+        product: i.productId,
+        sku: i.sku,
+        size: i.size,
+        width: i.width ?? undefined,
+        title: i.title,
+        image: i.image ?? undefined,
+        price: i.price,
+        quantity: i.quantity,
+      })),
+    subtotalAmount: row.subtotalAmount,
+    discountCode: row.discountCode ?? undefined,
+    discountAmount: row.discountAmount,
+    totalAmount: row.totalAmount,
+    status: row.status,
+    payment: {
+      method: 'fake',
+      status: row.paymentStatus,
+      paidAt: row.paidAt ?? undefined,
+      transactionId: row.transactionId ?? undefined,
+    },
+    shippingAddress: {
+      fullName: row.shippingFullName,
+      line1: row.shippingLine1,
+      line2: row.shippingLine2 ?? undefined,
+      city: row.shippingCity,
+      state: row.shippingState ?? undefined,
+      postalCode: row.shippingPostalCode,
+      country: row.shippingCountry,
+    },
+    statusHistory: [...row.history]
+      .sort((a, b) => a.at.getTime() - b.at.getTime() || a.id.localeCompare(b.id))
+      .map((h) => ({ status: h.status, at: h.at, note: h.note ?? undefined })),
+    deletedAt: row.deletedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
-export function mapCart(doc: {
-  id?: string;
-  _id?: { toString(): string };
-  owner: string;
-  items: { productId: { toString(): string }; sku: string; quantity: number }[];
-  createdAt: Date;
-  updatedAt: Date;
-}): Cart {
+export function mapCart(row: CartRow): Cart {
   return {
-    id: idOf(doc),
-    owner: doc.owner,
-    items: doc.items.map((i) => ({
-      productId: i.productId.toString(),
-      sku: i.sku,
-      quantity: i.quantity,
-    })),
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
+    id: row.id,
+    owner: row.owner,
+    items: [...row.items]
+      .sort((a, b) => a.position - b.position)
+      .map((i) => ({ productId: i.productId, sku: i.sku, quantity: i.quantity })),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
