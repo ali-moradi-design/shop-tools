@@ -1,0 +1,79 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cart</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+:root{--bg:#eef0f2;--panel:#fff;--ink:#0f1114;--steel:#3b4249;--mute:#6a727a;--line:#c8cdd2;--line2:#e1e4e7;--acc:#ffc20e;--acc-ink:#1a1400;--ok:#1d8a4a;--warn:#c76a00;--bad:#c62828}
+*{box-sizing:border-box;margin:0;padding:0;border-radius:0}
+body{width:1440px;background:var(--bg);color:var(--ink);font:400 14px/1.45 'IBM Plex Sans',sans-serif}
+.mono{font-family:'IBM Plex Mono',monospace}
+h1,h2,h3,.cond{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;font-weight:700}
+a{color:inherit;text-decoration:none}
+.util{background:var(--ink);color:#c9ced3;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;padding:7px 32px;display:flex;justify-content:space-between}
+.util b{color:var(--acc);font-weight:500}
+header.top{background:var(--panel);border-bottom:2px solid var(--ink);padding:0 32px;display:flex;align-items:center;gap:28px;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font:700 28px 'Barlow Condensed';letter-spacing:.08em}
+.logo i{width:26px;height:26px;background:var(--acc);border:2px solid var(--ink);display:block;position:relative}
+.logo i:after{content:'';position:absolute;left:4px;right:4px;top:9px;height:4px;background:var(--ink)}
+.logo small{font:500 10px 'IBM Plex Mono';color:var(--mute);letter-spacing:.12em;display:block;margin-top:-4px}
+.search{flex:1;display:flex;border:2px solid var(--ink);height:42px}
+.search span{flex:1;padding:10px 14px;color:var(--mute)}
+.search b{background:var(--ink);color:#fff;padding:0 22px;display:grid;place-items:center;font:600 13px 'IBM Plex Mono';letter-spacing:.08em}
+.acts{display:flex;gap:22px;font-weight:500}
+.acts span{display:flex;align-items:center;gap:6px}
+.acts em{font:600 11px 'IBM Plex Mono';background:var(--acc);color:var(--acc-ink);padding:1px 6px;font-style:normal}
+nav.cats{background:var(--panel);border-bottom:1px solid var(--line);padding:0 32px;display:flex;font:600 13px 'IBM Plex Sans';text-transform:uppercase;letter-spacing:.05em}
+nav.cats a{padding:13px 18px;border-right:1px solid var(--line2)}
+nav.cats a:first-child{border-left:1px solid var(--line2)}
+nav.cats a.on{background:var(--ink);color:var(--acc)}
+.wrap{padding:0 32px}
+.crumb{font:500 12px 'IBM Plex Mono';color:var(--mute);padding:16px 0}
+.crumb b{color:var(--ink);font-weight:500}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--acc);color:var(--acc-ink);border:2px solid var(--ink);font:700 14px 'Barlow Condensed';letter-spacing:.1em;text-transform:uppercase;padding:0 22px;height:46px}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink)}
+.tag{font:600 10px 'IBM Plex Mono';letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border:1px solid var(--ink)}
+.tag.y{background:var(--acc);border-color:var(--ink)}
+.dot{display:inline-block;width:9px;height:9px;background:var(--ok);margin-right:6px}
+.dot.w{background:var(--warn)}.dot.x{background:var(--bad)}
+.ph{background:#fff;position:relative;overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply;display:block}
+.card{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column}
+.card .ph{height:210px;border-bottom:1px solid var(--line2)}
+.card .b{padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px;flex:1}
+.card .nm{font:600 15px/1.25 'IBM Plex Sans'}
+.card .sku{font:400 11px 'IBM Plex Mono';color:var(--mute)}
+.kv{display:grid;grid-template-columns:1fr auto;font:400 12px 'IBM Plex Mono';border-top:1px solid var(--line2)}
+.kv div{padding:5px 0;border-bottom:1px solid var(--line2)}
+.kv div:nth-child(even){text-align:right;font-weight:600}
+.price{font:700 24px 'Barlow Condensed';letter-spacing:.02em}
+.price s{font:400 13px 'IBM Plex Mono';color:var(--mute);margin-left:6px}
+.row{display:flex;align-items:center}
+.sp{flex:1}
+footer{margin-top:56px;background:var(--ink);color:#aeb4ba;padding:36px 32px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;font-size:13px}
+footer h4{color:#fff;font:700 15px 'Barlow Condensed';letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+footer p{margin:5px 0}
+</style></head><body>
+<div class="util"><span>FREE SHIPPING OVER $150 &nbsp;·&nbsp; SHIPS FROM <b>BERLIN</b> / <b>HAMBURG</b> / <b>MUNICH</b></span><span>DEMO SHOP — PAYMENTS ARE SIMULATED</span></div>
+<header class="top"><a class="logo"><i></i><span>TOOLBENCH<small>SUPPLY CO. — TECH SPECS FIRST</small></span></a>
+<div class="search"><span>Search tools, SKUs or specs — e.g. “18 V brushless 60 Nm”</span><b>SEARCH</b></div>
+<div class="acts"><span>Account</span><span>Compare <em>3</em></span><span>Cart <em>2</em></span></div></header>
+<nav class="cats"><a class="">Power tools</a><a class="">Hand tools</a><a class="">Measuring</a><a class="">Fasteners</a><a class="">Abrasives</a><a class="">Safety</a><a class="">Storage</a></nav>
+
+<div class="wrap"><div class="crumb">Home / <b>Cart</b></div><h1 style="font-size:54px;line-height:1;margin-bottom:18px">Your cart <span class="mono" style="font-size:16px;color:var(--mute);vertical-align:middle">3 items</span></h1>
+<div style="display:grid;grid-template-columns:1fr 400px;gap:28px;align-items:start">
+<div class="card"><div style="display:grid;grid-template-columns:96px 1fr 120px 110px 30px;gap:16px;padding:10px 18px;background:var(--ink);color:#fff" class="mono"><span style="font-size:11px">ITEM</span><span></span><span style="font-size:11px">QTY</span><span style="font-size:11px;text-align:right">TOTAL</span><span></span></div>
+<div style="display:grid;grid-template-columns:96px 1fr 120px 110px 30px;gap:16px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line2)">
+<div class="ph" style="height:80px;border:1px solid var(--line2)"><img src="photos/drill-cordless-1.jpg"></div><div><div class="mono" style="font-size:11px;color:var(--mute)">DRL-18B-60</div><b>Cordless Drill/Driver 18 V Brushless</b><div style="font-size:12px;color:var(--steel);margin-top:3px"><span class="dot "></span>Ships from Berlin — 12 available</div></div>
+<span class="mono" style="border:2px solid var(--ink);height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#fff"><span>−</span><b>1</b><span>+</span></span><b class="price" style="text-align:right;font-size:22px">$129.00</b><span class="mono" style="color:var(--mute)">✕</span></div><div style="display:grid;grid-template-columns:96px 1fr 120px 110px 30px;gap:16px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line2)">
+<div class="ph" style="height:80px;border:1px solid var(--line2)"><img src="photos/caliper.jpg"></div><div><div class="mono" style="font-size:11px;color:var(--mute)">MSR-CAL-150</div><b>Digital Caliper 150 mm</b><div style="font-size:12px;color:var(--steel);margin-top:3px"><span class="dot w"></span>Hamburg — 3 available (low)</div></div>
+<span class="mono" style="border:2px solid var(--ink);height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#fff"><span>−</span><b>2</b><span>+</span></span><b class="price" style="text-align:right;font-size:22px">$49.80</b><span class="mono" style="color:var(--mute)">✕</span></div><div style="display:grid;grid-template-columns:96px 1fr 120px 110px 30px;gap:16px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line2)">
+<div class="ph" style="height:80px;border:1px solid var(--line2)"><img src="photos/wrench-adjustable-1.jpg"></div><div><div class="mono" style="font-size:11px;color:var(--mute)">WRN-ADJ-250</div><b>Adjustable Wrench 250 mm CrV</b><div style="font-size:12px;color:var(--steel);margin-top:3px"><span class="dot "></span>Ships from Berlin — 31 available</div></div>
+<span class="mono" style="border:2px solid var(--ink);height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#fff"><span>−</span><b>1</b><span>+</span></span><b class="price" style="text-align:right;font-size:22px">$14.50</b><span class="mono" style="color:var(--mute)">✕</span></div>
+<div class="row mono" style="padding:14px 18px;font-size:12px;color:var(--steel)">▪ Your order ships in 2 parcels: Berlin (2 items), Hamburg (1 item)</div></div>
+<div class="card" style="padding:20px"><h2 style="font-size:28px;margin-bottom:12px">Order summary</h2>
+<div class="kv" style="font-size:13px"><div>Subtotal</div><div>$193.30</div><div>Discount WELCOME10</div><div>−$19.33</div><div>Shipping</div><div>Free</div><div>Tax (incl.)</div><div>$27.77</div></div>
+<div class="row" style="margin:14px 0"><b class="cond" style="font-size:20px;letter-spacing:.08em">TOTAL</b><span class="sp"></span><span class="price" style="font-size:38px">$173.97</span></div>
+<div class="row" style="gap:8px;margin-bottom:14px"><span class="mono" style="flex:1;border:2px solid var(--ink);padding:10px 12px;background:#fff;font-size:13px">WELCOME10</span><a class="btn dark" style="height:44px">Apply</a></div>
+<a class="btn" style="width:100%;height:54px;font-size:18px">Checkout →</a><div class="mono" style="font-size:11px;color:var(--mute);margin-top:10px;text-align:center">Demo payment gateway — no real cards</div></div>
+</div></div>
+<footer><div><h4>TOOLBENCH Supply Co.</h4><p>Demo shop for a portfolio. Photos from Wikimedia Commons (credits in the repo). Prices and stock are generated.</p></div>
+<div><h4>Shop</h4><p>Power tools</p><p>Hand tools</p><p>Measuring</p></div><div><h4>Help</h4><p>Shipping</p><p>Returns</p><p>Spec guide</p></div><div><h4>Warehouses</h4><p>Berlin · Hamburg · Munich</p></div></footer>
+</body></html>

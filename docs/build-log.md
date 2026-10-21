@@ -28,3 +28,20 @@ What was done in each session, in order. Updated at the end of every step.
   (`graphify query`, AST only, no LLM tokens) instead of reading many files.
 - Product photos for the tools catalog will come from free sources (Wikimedia
   Commons, CC0 / CC BY / CC BY-SA / public domain), with a `CREDITS.md`.
+
+## Step M: mockups (waiting for approval)
+
+- Five pages rendered to images with Playwright from HTML/CSS (`docs/mockups/build.mjs`,
+  sources in `docs/mockups/src`): home, product listing with spec filters, product
+  page, cart, compare (up to four products).
+- Working name for the shop: **Toolbench Supply Co.** (placeholder, to be confirmed).
+- Look: sharp and industrial. Concrete grey background, near-black ink, safety
+  yellow accent, no rounded corners, hairline borders. Barlow Condensed (headings),
+  IBM Plex Sans (text), IBM Plex Mono (specs and numbers).
+- Spec filters: price and spec sliders with min/max fields and a unit switch
+  (Nm / in·lb, mm / in, kg / lb), checkbox groups with counts, active filter chips.
+- Stock per warehouse is shown on the product page, in the cart (which warehouse
+  ships each line) and in the compare table.
+- Photos: Wikimedia Commons (CC0, CC BY, CC BY-SA, public domain), credits in
+  `docs/mockups/src/photos/CREDITS.md`.
+- No UI code until these are approved.
