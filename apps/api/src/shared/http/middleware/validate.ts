@@ -15,7 +15,14 @@ export function validate(schemas: Schemas) {
       }
       if (schemas.query) {
         const parsed = schemas.query.parse(req.query);
-        Object.assign(req.query, parsed);
+        // Express 5: `req.query` is a getter that parses the URL again on every read, so
+        // assigning into it is lost. Replace it, or the controller sees the raw strings.
+        Object.defineProperty(req, 'query', {
+          value: parsed,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
       }
       if (schemas.params) {
         const parsed = schemas.params.parse(req.params);

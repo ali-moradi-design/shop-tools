@@ -1,12 +1,9 @@
 /**
  * Must run before any app module imports env.ts.
- * Mongo URI is overwritten by the test helper after memory server starts;
- * a placeholder satisfies Zod at first import.
+ * DATABASE_URL points at the *_test database that global-setup rebuilds.
  */
 process.env.NODE_ENV = 'test';
 process.env.PORT = '4000';
-process.env.MONGODB_URI =
-  process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/shop-tools-test-placeholder';
 process.env.DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? 'mysql://root:root@127.0.0.1:3306/toolbench_test';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret-key-min8';

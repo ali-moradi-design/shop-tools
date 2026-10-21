@@ -1,42 +1,51 @@
-# Production stack for /srv/apps/leather-shop/compose.yaml (roadmap phase 8).
+# Production stack for /srv/apps/shop-tools/compose.yaml (roadmap phase 8).
 # Images are built in CI and pulled here; secrets live in .env next to this file.
-name: leather-shop
+name: shop-tools
 
 services:
-  mongo:
-    image: mongo:8.2.6 # pinned: 8.3 refuses to start on Linux 6.19+ (SERVER-121912)
-    command: ["--wiredTigerCacheSizeGB", "0.25", "--auth"]
+  mysql:
+    image: mysql:8.4
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=128M
+      - --performance-schema=OFF
+      - --skip-name-resolve
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: toolbench
+      MYSQL_USER: toolbench
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      - mongo-data:/data/db
+      - mysql-data:/var/lib/mysql
     networks: [backend]
     # no published ports: only the API reaches the database
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 15s
       timeout: 5s
-      retries: 5
+      retries: 10
     mem_limit: 512m
     restart: unless-stopped
 
   api:
-    image: ghcr.io/ali-moradi-design/leather-shop-api:${TAG:-latest}
+    image: ghcr.io/ali-moradi-design/shop-tools-api:${TAG:-latest}
     env_file: .env
     environment:
       NODE_ENV: production
       PORT: 4000
-      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongo:27017/leather?authSource=admin
-      CORS_ORIGIN: https://shop-leather.ali-moradi-develop.com
+      DATABASE_URL: mysql://toolbench:${MYSQL_PASSWORD}@mysql:3306/toolbench
+      CORS_ORIGIN: https://shop-tools.ali-moradi-develop.com
       # one proxy hop in front of the API: the storefront's /api route
       TRUST_PROXY: 1
       WEB_REVALIDATE_URL: http://web:3000/hooks/revalidate
     volumes:
       - uploads:/app/uploads
     networks: [backend, frontend]
+    # apply the migrations, then start (the image carries the Prisma CLI and schema)
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
     depends_on:
-      mongo:
+      mysql:
         condition: service_healthy
     read_only: true
     tmpfs: [/tmp]
@@ -45,14 +54,14 @@ services:
     restart: unless-stopped
 
   web:
-    image: ghcr.io/ali-moradi-design/leather-shop-web:${TAG:-latest}
+    image: ghcr.io/ali-moradi-design/shop-tools-web:${TAG:-latest}
     environment:
       API_URL: http://api:4000
-      NEXT_PUBLIC_SITE_URL: https://shop-leather.ali-moradi-develop.com
+      NEXT_PUBLIC_SITE_URL: https://shop-tools.ali-moradi-develop.com
       REVALIDATE_SECRET: ${REVALIDATE_SECRET}
     # Nginx on the host proxies to this; Docker bypasses ufw, so bind to localhost only
     ports:
-      - "127.0.0.1:3104:3000"
+      - "127.0.0.1:3105:3000"
     networks: [frontend]
     depends_on: [api]
     security_opt: [no-new-privileges:true]
@@ -65,5 +74,5 @@ networks:
   frontend: {}
 
 volumes:
-  mongo-data:
+  mysql-data:
   uploads:

@@ -1,4 +1,3 @@
-import { Types } from 'mongoose';
 import type { IReviewRepository } from '@modules/reviews/domain/review.repository';
 import type {
   Review,
@@ -6,65 +5,90 @@ import type {
   UpdateReviewInput,
   ReviewListFilter,
 } from '@modules/reviews/domain/review.entity';
-import { ReviewModel } from './models/ReviewModel';
-import { mapReview } from './mappers';
+import { getPrisma } from '@shared/infra/prisma/client';
+import { isNotFound } from '@shared/infra/prisma/errors';
 import { paginate } from '@shared/pagination';
+import { mapReview } from './mappers';
 
-export class MongooseReviewRepository implements IReviewRepository {
+const include = {
+  user: { select: { name: true, email: true } },
+  product: { select: { title: true, slug: true } },
+} as const;
+const live = { deletedAt: null } as const;
+
+export class PrismaReviewRepository implements IReviewRepository {
   async findById(id: string, populate = false): Promise<Review | null> {
-    let q = ReviewModel.findById(id);
-    if (populate) {
-      q = q.populate('user', 'name email').populate('product', 'title slug');
-    }
-    const doc = await q;
-    return doc ? mapReview(doc) : null;
+    const row = await getPrisma().review.findFirst({ where: { id, ...live }, include });
+    return row ? mapReview(row, populate, true) : null;
   }
 
   async list(filter: ReviewListFilter): Promise<{ data: Review[]; total: number }> {
     const { limit, skip } = paginate(filter.page, filter.limit);
-    const query: Record<string, unknown> = {};
-    if (filter.product) query.product = filter.product;
-    if (filter.user) query.user = filter.user;
-    const [docs, total] = await Promise.all([
-      ReviewModel.find(query)
-        // public list: reviewer name only, never the email
-        .populate('user', 'name')
-        .populate('product', 'title slug')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      ReviewModel.countDocuments(query),
+    const where = {
+      ...live,
+      ...(filter.product ? { productId: filter.product } : {}),
+      ...(filter.user ? { userId: filter.user } : {}),
+    };
+    const client = getPrisma();
+    const [rows, total] = await Promise.all([
+      client.review.findMany({
+        where,
+        include,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip,
+        take: limit,
+      }),
+      client.review.count({ where }),
     ]);
-    return { data: docs.map(mapReview), total };
+    // public list: reviewer name only, never the email
+    return { data: rows.map((r) => mapReview(r, true, false)), total };
   }
 
   async create(input: CreateReviewInput): Promise<Review> {
-    const doc = await ReviewModel.create(input);
-    return mapReview(doc);
+    const row = await getPrisma().review.create({
+      data: {
+        productId: input.product,
+        userId: input.user,
+        rating: input.rating,
+        comment: input.comment,
+      },
+      include,
+    });
+    return mapReview(row, false);
   }
 
   async update(id: string, input: UpdateReviewInput): Promise<Review | null> {
-    const doc = await ReviewModel.findById(id);
-    if (!doc) return null;
-    if (input.rating !== undefined) doc.rating = input.rating;
-    if (input.comment !== undefined) doc.comment = input.comment;
-    await doc.save();
-    return mapReview(doc);
+    const existing = await this.findById(id);
+    if (!existing) return null;
+    const row = await getPrisma().review.update({
+      where: { id },
+      data: { rating: input.rating, comment: input.comment },
+      include,
+    });
+    return mapReview(row, false);
   }
 
   async ratingSummary(productId: string): Promise<{ avg: number; count: number }> {
-    const [row] = await ReviewModel.aggregate<{ avg: number; count: number }>([
-      { $match: { product: new Types.ObjectId(productId), deletedAt: null } },
-      { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } },
-    ]);
-    return row ? { avg: Math.round(row.avg * 10) / 10, count: row.count } : { avg: 0, count: 0 };
+    const agg = await getPrisma().review.aggregate({
+      where: { productId, ...live },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+    const avg = agg._avg.rating ?? 0;
+    return { avg: Math.round(avg * 10) / 10, count: agg._count._all };
   }
 
   async softDelete(id: string): Promise<Review | null> {
-    const doc = await ReviewModel.findById(id);
-    if (!doc) return null;
-    doc.deletedAt = new Date();
-    await doc.save();
-    return mapReview(doc);
+    try {
+      const row = await getPrisma().review.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+        include,
+      });
+      return mapReview(row, false);
+    } catch (err) {
+      if (isNotFound(err)) return null;
+      throw err;
+    }
   }
 }

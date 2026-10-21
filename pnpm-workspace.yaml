@@ -2,7 +2,6 @@ packages:
   - apps/*
 onlyBuiltDependencies:
   - esbuild
-  - mongodb-memory-server
   - prisma
   - '@prisma/client'
   - '@prisma/engines'

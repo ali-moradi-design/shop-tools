@@ -3,33 +3,30 @@
  * favorites, reviews, sign-ups, sessions) and restores the seed catalog,
  * stock, prices and demo reviews. Run with `pnpm reset-demo` (cron on the server).
  */
-import mongoose from 'mongoose';
 import { connectDb } from '../shared/config/db';
-import { OrderModel } from '../modules/ordering/infra/models/OrderModel';
-import { CartModel } from '../modules/ordering/infra/models/CartModel';
-import { FavoriteModel } from '../modules/engagement/infra/models/FavoriteModel';
-import { ReviewModel } from '../modules/reviews/infra/models/ReviewModel';
-import { UserModel } from '../modules/identity/infra/models/UserModel';
-import { RefreshTokenModel } from '../modules/identity/infra/models/RefreshTokenModel';
-import { DiscountModel } from '../modules/promotions/infra/models/DiscountModel';
-import { ProductModel } from '../modules/catalog/infra/models/ProductModel';
+import { prisma, disconnectPrisma } from '../shared/infra/prisma/client';
 import { runSeed } from './seed';
 import { adminCredentials } from './seed/identity';
 
 /** Accounts created by the seed keep existing; every other account is a visitor's. */
-const SEED_ACCOUNTS = /@shop-tools\.local$/;
+const SEED_ACCOUNT_DOMAIN = '@shop-tools.local';
 
 export async function resetDemo(): Promise<void> {
-  await Promise.all([
-    OrderModel.deleteMany({}),
-    CartModel.deleteMany({}),
-    FavoriteModel.deleteMany({}),
-    ReviewModel.deleteMany({}),
-    RefreshTokenModel.deleteMany({}),
-    UserModel.deleteMany({ $and: [{ email: { $not: SEED_ACCOUNTS } }, { email: { $ne: adminCredentials().email } }] }),
-    DiscountModel.updateMany({}, { usedCount: 0 }),
+  // one transaction: either everything a visitor created is gone, or nothing changed
+  await prisma.$transaction([
+    prisma.order.deleteMany(), // lines and status history go with the order
+    prisma.cart.deleteMany(),
+    prisma.favorite.deleteMany(),
+    prisma.review.deleteMany(),
+    prisma.refreshToken.deleteMany(),
+    prisma.user.deleteMany({
+      where: {
+        AND: [{ NOT: { email: { endsWith: SEED_ACCOUNT_DOMAIN } } }, { email: { not: adminCredentials().email } }],
+      },
+    }),
+    prisma.discount.updateMany({ data: { usedCount: 0 } }),
     // prices, stock and ratings come back from the seed below
-    ProductModel.updateMany({}, { ratingAvg: 0, ratingCount: 0 }),
+    prisma.product.updateMany({ data: { ratingAvg: 0, ratingCount: 0 } }),
   ]);
   await runSeed();
   await revalidateWeb();
@@ -48,7 +45,7 @@ async function main() {
   await connectDb();
   await resetDemo();
   console.log(`Demo data reset at ${new Date().toISOString()}`);
-  await mongoose.disconnect();
+  await disconnectPrisma();
 }
 
 main().catch((err) => {

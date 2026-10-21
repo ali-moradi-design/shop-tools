@@ -20,11 +20,7 @@ export class DashboardService {
       this.orders.count(),
       this.issues.countOpen(),
       this.products.countLowStock(lowStockThreshold),
-      this.orders.aggregateRevenue({
-        deletedAt: null,
-        'payment.status': 'paid',
-        status: { $in: ['paid', 'processing', 'shipped', 'completed'] },
-      }),
+      this.orders.aggregateRevenue({ statuses: ['paid', 'processing', 'shipped', 'completed'] }),
     ]);
 
     return {

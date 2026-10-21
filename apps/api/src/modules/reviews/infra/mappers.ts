@@ -1,51 +1,27 @@
+import type { Prisma } from '@prisma/client';
 import type { Review } from '../domain/review.entity';
 
-function idOf(doc: { id?: string; _id?: { toString(): string } }): string {
-  return doc.id ?? doc._id!.toString();
-}
+export type ReviewRow = Prisma.ReviewGetPayload<{
+  include: { user: { select: { name: true; email: true } }; product: { select: { title: true; slug: true } } };
+}>;
 
-export function mapReview(doc: {
-  id?: string;
-  _id?: { toString(): string };
-  product: unknown;
-  user: unknown;
-  rating: number;
-  comment?: string;
-  deletedAt?: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): Review {
-  const productObj = doc.product as { _id?: { toString(): string }; id?: string; title?: string; slug?: string; toString?: () => string };
-  const userObj = doc.user as { _id?: { toString(): string }; id?: string; name?: string; email?: string; toString?: () => string };
-
-  const productId =
-    productObj && typeof productObj === 'object' && (productObj._id || productObj.id)
-      ? (productObj.id ?? productObj._id!.toString())
-      : String(doc.product);
-  const userId =
-    userObj && typeof userObj === 'object' && (userObj._id || userObj.id)
-      ? (userObj.id ?? userObj._id!.toString())
-      : String(doc.user);
-
+/** `withEmail` is only for the owner/admin views; the public list shows the name only. */
+export function mapReview(row: ReviewRow, populate: boolean, withEmail = false): Review {
   const review: Review = {
-    id: idOf(doc),
-    product: productId,
-    user: userId,
-    rating: doc.rating,
-    comment: doc.comment,
-    deletedAt: doc.deletedAt,
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
+    id: row.id,
+    product: row.productId,
+    user: row.userId,
+    rating: row.rating,
+    comment: row.comment ?? undefined,
+    deletedAt: row.deletedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
-
-  if (productObj?.title || userObj?.name) {
-    review.populated = {};
-    if (userObj?.name) {
-      review.populated.user = { name: userObj.name, email: userObj.email ?? '' };
-    }
-    if (productObj?.title) {
-      review.populated.product = { title: productObj.title, slug: productObj.slug ?? '' };
-    }
+  if (populate) {
+    review.populated = {
+      user: { name: row.user.name, email: withEmail ? row.user.email : '' },
+      product: { title: row.product.title, slug: row.product.slug },
+    };
   }
   return review;
 }

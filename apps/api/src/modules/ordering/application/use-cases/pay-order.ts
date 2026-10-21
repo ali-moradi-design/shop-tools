@@ -33,13 +33,15 @@ export class PayOrderUseCase {
 
     assertTransition(order.status, 'paid');
 
+    // With a unit of work, stock changes and the paid order commit (or roll back) together.
+    // Without one (unit tests with in-memory fakes) a failure must be undone by hand.
     const decremented: { productId: string; sku: string; quantity: number }[] = [];
     const run = this.uow
       ? <T>(fn: () => Promise<T>) => this.uow!.runInTransaction(async () => fn())
       : <T>(fn: () => Promise<T>) => fn();
 
     try {
-      await run(async () => {
+      const saved = await run(async () => {
         for (const item of order.items) {
           const ok = await this.products.decrementStock(item.product, item.sku, item.quantity);
           if (!ok) {
@@ -50,21 +52,21 @@ export class PayOrderUseCase {
           }
           decremented.push({ productId: item.product, sku: item.sku, quantity: item.quantity });
         }
-      });
 
-      order.status = 'paid';
-      order.payment = {
-        method: 'fake',
-        status: 'paid',
-        paidAt: new Date(),
-        transactionId: `fake_${Date.now()}`,
-      };
-      order.statusHistory.push({
-        status: 'paid',
-        at: new Date(),
-        note: 'Fake payment confirmed',
+        order.status = 'paid';
+        order.payment = {
+          method: 'fake',
+          status: 'paid',
+          paidAt: new Date(),
+          transactionId: `fake_${Date.now()}`,
+        };
+        order.statusHistory.push({
+          status: 'paid',
+          at: new Date(),
+          note: 'Fake payment confirmed',
+        });
+        return this.orders.save(order);
       });
-      const saved = await this.orders.save(order);
 
       await domainEvents.publish(
         orderPaidEvent({
@@ -98,8 +100,10 @@ export class PayOrderUseCase {
 
       return saved;
     } catch (err) {
-      for (const d of decremented) {
-        await this.products.incrementStock(d.productId, d.sku, d.quantity);
+      if (!this.uow) {
+        for (const d of decremented) {
+          await this.products.incrementStock(d.productId, d.sku, d.quantity);
+        }
       }
 
       if (err instanceof DomainError && err.code === 'INSUFFICIENT_STOCK') {

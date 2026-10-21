@@ -27,7 +27,7 @@ an internal network; API on the internal network only, read-only filesystem,
 - Passwords hashed with bcrypt; refresh tokens stored hashed and rotated; generic
   "Invalid credentials" on login; auth endpoints rate-limited.
 - All request bodies, params and queries validated with zod; search terms are
-  regex-escaped and length-limited (no NoSQL injection or ReDoS); page size ≤ 100.
+  length-limited, and `%`, `_` and `\` are escaped before the SQL `LIKE`; all SQL goes through Prisma (parameterized) or tagged `$queryRaw` templates; page size ≤ 100.
 - Prices and stock always come from the catalog at checkout and payment; stock is
   taken atomically per size; order access is checked per user.
 - Cookies are httpOnly, `Secure` in production, SameSite=Lax; the guest cart id is

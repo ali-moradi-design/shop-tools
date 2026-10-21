@@ -1,67 +1,125 @@
-import type { IOrderRepository } from '@modules/ordering/domain/order.repository';
+import { Prisma, type OrderStatus as DbOrderStatus } from '@prisma/client';
+import type { IOrderRepository, OrderStatsFilter } from '@modules/ordering/domain/order.repository';
 import type {
   Order,
   CreateOrderInput,
   OrderStatus,
   Payment,
 } from '@modules/ordering/domain/order.entity';
-import { OrderModel } from './models/OrderModel';
+import { getPrisma, prisma, type PrismaTx } from '@shared/infra/prisma/client';
 import { mapOrder } from './mappers';
 
-export class MongooseOrderRepository implements IOrderRepository {
+const include = { items: true, history: true } as const;
+
+function inTransaction<T>(fn: (tx: PrismaTx) => Promise<T>): Promise<T> {
+  const client = getPrisma();
+  return client === prisma ? prisma.$transaction((tx) => fn(tx)) : fn(client);
+}
+
+/** Paid, not deleted, optionally limited by status and paid-at window. */
+function statsWhere(filter: OrderStatsFilter): Prisma.OrderWhereInput {
+  return {
+    deletedAt: null,
+    paymentStatus: 'paid',
+    ...(filter.statuses ? { status: { in: filter.statuses as DbOrderStatus[] } } : {}),
+    ...(filter.paidFrom || filter.paidTo
+      ? { paidAt: { ...(filter.paidFrom ? { gte: filter.paidFrom } : {}), ...(filter.paidTo ? { lte: filter.paidTo } : {}) } }
+      : {}),
+  };
+}
+
+/** The same filter as raw SQL fragments (for the reports Prisma cannot group by itself). */
+function statsSql(filter: OrderStatsFilter): Prisma.Sql {
+  return Prisma.sql`o.deletedAt IS NULL AND o.paymentStatus = 'paid'
+    ${filter.statuses?.length ? Prisma.sql`AND o.status IN (${Prisma.join(filter.statuses)})` : Prisma.empty}
+    ${filter.paidFrom ? Prisma.sql`AND o.paidAt >= ${filter.paidFrom}` : Prisma.empty}
+    ${filter.paidTo ? Prisma.sql`AND o.paidAt <= ${filter.paidTo}` : Prisma.empty}`;
+}
+
+export class PrismaOrderRepository implements IOrderRepository {
   async findById(id: string): Promise<Order | null> {
-    const doc = await OrderModel.findById(id);
-    return doc ? mapOrder(doc) : null;
+    const row = await getPrisma().order.findFirst({ where: { id, deletedAt: null }, include });
+    return row ? mapOrder(row) : null;
   }
 
   async list(filter: { userId?: string; limit?: number }): Promise<Order[]> {
-    const q: Record<string, unknown> = {};
-    if (filter.userId) q.user = filter.userId;
-    let query = OrderModel.find(q).sort({ createdAt: -1 });
-    if (filter.limit) query = query.limit(filter.limit);
-    const docs = await query;
-    return docs.map(mapOrder);
+    const rows = await getPrisma().order.findMany({
+      where: { deletedAt: null, ...(filter.userId ? { userId: filter.userId } : {}) },
+      orderBy: { createdAt: 'desc' },
+      ...(filter.limit ? { take: filter.limit } : {}),
+      include,
+    });
+    return rows.map(mapOrder);
   }
 
   async create(input: CreateOrderInput): Promise<Order> {
-    const discountAmount = input.discountAmount ?? 0;
-    const subtotalAmount = input.subtotalAmount;
-    const doc = await OrderModel.create({
-      user: input.userId,
-      items: input.items.map((i) => ({
-        product: i.product,
-        sku: i.sku,
-        size: i.size,
-        width: i.width,
-        title: i.title,
-        image: i.image,
-        price: i.price,
-        quantity: i.quantity,
-      })),
-      subtotalAmount,
-      discountCode: input.discountCode,
-      discountAmount,
-      totalAmount: input.totalAmount,
-      status: 'pending_payment',
-      payment: { method: 'fake', status: 'pending' },
-      shippingAddress: input.shippingAddress,
-      statusHistory: [{ status: 'pending_payment', at: new Date(), note: 'Order created' }],
+    const a = input.shippingAddress;
+    const row = await getPrisma().order.create({
+      data: {
+        userId: input.userId,
+        subtotalAmount: input.subtotalAmount,
+        discountCode: input.discountCode,
+        discountAmount: input.discountAmount ?? 0,
+        totalAmount: input.totalAmount,
+        status: 'pending_payment',
+        paymentMethod: 'fake',
+        paymentStatus: 'pending',
+        shippingFullName: a.fullName,
+        shippingLine1: a.line1,
+        shippingLine2: a.line2,
+        shippingCity: a.city,
+        shippingState: a.state,
+        shippingPostalCode: a.postalCode,
+        shippingCountry: a.country,
+        items: {
+          create: input.items.map((i, position) => ({
+            productId: i.product,
+            sku: i.sku,
+            size: i.size,
+            width: i.width,
+            title: i.title,
+            image: i.image,
+            price: i.price,
+            quantity: i.quantity,
+            position,
+          })),
+        },
+        history: { create: [{ status: 'pending_payment', note: 'Order created' }] },
+      },
+      include,
     });
-    return mapOrder(doc);
+    return mapOrder(row);
   }
 
+  /** Writes status, payment, totals and the whole status history of the order. */
   async save(order: Order): Promise<Order> {
-    const doc = await OrderModel.findById(order.id);
-    if (!doc) throw new Error('Order not found');
-    doc.status = order.status;
-    doc.payment = order.payment;
-    doc.statusHistory = order.statusHistory;
-    doc.subtotalAmount = order.subtotalAmount;
-    doc.discountCode = order.discountCode;
-    doc.discountAmount = order.discountAmount;
-    doc.totalAmount = order.totalAmount;
-    await doc.save();
-    return mapOrder(doc);
+    return inTransaction(async (tx) => {
+      const existing = await tx.order.findUnique({ where: { id: order.id }, select: { id: true } });
+      if (!existing) throw new Error('Order not found');
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: order.status,
+          paymentStatus: order.payment.status,
+          paidAt: order.payment.paidAt ?? null,
+          transactionId: order.payment.transactionId ?? null,
+          subtotalAmount: order.subtotalAmount,
+          discountCode: order.discountCode ?? null,
+          discountAmount: order.discountAmount,
+          totalAmount: order.totalAmount,
+        },
+      });
+      await tx.orderStatusHistory.deleteMany({ where: { orderId: order.id } });
+      await tx.orderStatusHistory.createMany({
+        data: order.statusHistory.map((h) => ({
+          orderId: order.id,
+          status: h.status,
+          at: h.at,
+          note: h.note ?? null,
+        })),
+      });
+      return mapOrder(await tx.order.findUniqueOrThrow({ where: { id: order.id }, include }));
+    });
   }
 
   async updateStatus(
@@ -70,73 +128,77 @@ export class MongooseOrderRepository implements IOrderRepository {
     payment?: Partial<Payment>,
     note?: string,
   ): Promise<Order | null> {
-    const doc = await OrderModel.findById(id);
-    if (!doc) return null;
-    doc.status = status;
-    if (payment) {
-      doc.payment = { ...doc.payment, ...payment };
-    }
-    doc.statusHistory.push({ status, at: new Date(), note });
-    await doc.save();
-    return mapOrder(doc);
+    return inTransaction(async (tx) => {
+      const existing = await tx.order.findFirst({ where: { id, deletedAt: null }, select: { id: true } });
+      if (!existing) return null;
+      await tx.order.update({
+        where: { id },
+        data: {
+          status,
+          ...(payment?.status ? { paymentStatus: payment.status } : {}),
+          ...(payment?.paidAt ? { paidAt: payment.paidAt } : {}),
+          ...(payment?.transactionId ? { transactionId: payment.transactionId } : {}),
+          history: { create: { status, note } },
+        },
+      });
+      return mapOrder(await tx.order.findUniqueOrThrow({ where: { id }, include }));
+    });
   }
 
   async count(): Promise<number> {
-    return OrderModel.countDocuments();
+    return getPrisma().order.count({ where: { deletedAt: null } });
   }
 
-  async aggregateRevenue(match: Record<string, unknown>) {
-    const [agg] = await OrderModel.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: '$totalAmount' },
-          orderCount: { $sum: 1 },
-          avgOrderValue: { $avg: '$totalAmount' },
-        },
-      },
-    ]);
-    return agg ?? { totalRevenue: 0, orderCount: 0, avgOrderValue: 0 };
+  async aggregateRevenue(filter: OrderStatsFilter) {
+    const agg = await getPrisma().order.aggregate({
+      where: statsWhere(filter),
+      _sum: { totalAmount: true },
+      _count: { _all: true },
+      _avg: { totalAmount: true },
+    });
+    return {
+      totalRevenue: agg._sum.totalAmount ?? 0,
+      orderCount: agg._count._all,
+      avgOrderValue: agg._avg.totalAmount ?? 0,
+    };
   }
 
   async aggregateByStatus() {
-    return OrderModel.aggregate([
-      { $match: { deletedAt: null } },
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-      { $project: { status: '$_id', count: 1, _id: 0 } },
-    ]);
+    const rows = await getPrisma().order.groupBy({
+      by: ['status'],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    });
+    return rows.map((r) => ({ status: r.status, count: r._count._all }));
   }
 
-  async aggregateTopProducts(match: Record<string, unknown>, limit: number) {
-    return OrderModel.aggregate([
-      { $match: match },
-      { $unwind: '$items' },
-      {
-        $group: {
-          _id: '$items.product',
-          title: { $first: '$items.title' },
-          quantitySold: { $sum: '$items.quantity' },
-          revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } },
-        },
-      },
-      { $sort: { quantitySold: -1 } },
-      { $limit: limit },
-    ]);
+  async aggregateTopProducts(filter: OrderStatsFilter, limit: number) {
+    const rows = await getPrisma().$queryRaw<
+      { id: string; title: string; quantitySold: bigint; revenue: bigint }[]
+    >`SELECT oi.productId AS id, MAX(oi.title) AS title,
+        CAST(SUM(oi.quantity) AS SIGNED) AS quantitySold,
+        CAST(SUM(oi.price * oi.quantity) AS SIGNED) AS revenue
+      FROM OrderItem oi JOIN \`Order\` o ON o.id = oi.orderId
+      WHERE ${statsSql(filter)}
+      GROUP BY oi.productId
+      ORDER BY quantitySold DESC, id ASC
+      LIMIT ${limit}`;
+    return rows.map((r) => ({
+      _id: r.id,
+      title: r.title,
+      quantitySold: Number(r.quantitySold),
+      revenue: Number(r.revenue),
+    }));
   }
 
-  async aggregateSalesByDate(match: Record<string, unknown>) {
-    return OrderModel.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$payment.paidAt' } },
-          revenue: { $sum: '$totalAmount' },
-          orders: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-      { $project: { date: '$_id', revenue: 1, orders: 1, _id: 0 } },
-    ]);
+  async aggregateSalesByDate(filter: OrderStatsFilter) {
+    const rows = await getPrisma().$queryRaw<{ date: string; revenue: bigint; orders: bigint }[]>`
+      SELECT DATE_FORMAT(o.paidAt, '%Y-%m-%d') AS date,
+        CAST(SUM(o.totalAmount) AS SIGNED) AS revenue, COUNT(*) AS orders
+      FROM \`Order\` o
+      WHERE ${statsSql(filter)} AND o.paidAt IS NOT NULL
+      GROUP BY date
+      ORDER BY date ASC`;
+    return rows.map((r) => ({ date: r.date, revenue: Number(r.revenue), orders: Number(r.orders) }));
   }
 }

@@ -85,3 +85,33 @@ What was done in each session, in order. Updated at the end of every step.
 - `compose.yaml`: MySQL (small buffer pool, `performance_schema` off, 512 MB) next
   to the old MongoDB. CI: MySQL service in the API job. Dockerfile copies the
   Prisma schema before install (the client is generated in `postinstall`).
+
+## Step 3: all repositories on MySQL, MongoDB removed
+
+- Every module's `infra` was rewritten on Prisma (identity, catalog, promotions,
+  ordering, engagement, reviews, reporting). The domain, application and HTTP
+  layers did not change, except where a Mongo-shaped value leaked through a port
+  (see "Ports changed").
+- The 44 contract tests that passed on MongoDB pass unchanged on MySQL; 7 new tests
+  cover MySQL-specific behavior: `LIKE` escaping, SQL text in a search, two parallel
+  buyers for the last unit, an all-or-nothing payment, duplicate e-mail (409) and
+  the guest cart cleanup. The Playwright E2E (purchase path + axe) passes too.
+- Stock: `UPDATE ProductVariant ... WHERE stock >= n` is one atomic statement;
+  `Product.stock` is recomputed from the variants in the same transaction.
+- Payment is now atomic: stock decrements and the paid order are one transaction
+  (`PayOrderUseCase`). The old hand-written "give the stock back" compensation only
+  runs when there is no unit of work (unit tests with fakes); with a real
+  transaction it would have added the stock twice.
+- Ports changed: `aggregate*` took a Mongo `$match` object; they now take a typed
+  `OrderStatsFilter`. `ICartRepository.purgeStaleGuestCarts` replaces the MongoDB
+  TTL index (the server runs it at start and daily).
+- Bug found by the real database: `validate()` did `Object.assign(req.query, parsed)`,
+  but in Express 5 `req.query` is a getter that parses the URL on every read, so the
+  parsed (typed, defaulted) values were thrown away and controllers got raw strings.
+  Mongoose had silently cast them. `validate()` now replaces `req.query`; a test
+  covers it. This also means query values are now really validated (`limit=1000` -> 400).
+- Error handler maps Prisma `P2002` (duplicate) to 409, `P2025` to 404, `P2003` to 409.
+- Removed: `mongoose`, `mongodb-memory-server`, Mongo in compose, CI, deploy files.
+  Deploy: MySQL container (internal network, 128 MB buffer pool, `performance_schema`
+  off, 512 MB), the API runs `prisma migrate deploy` on start. CI builds the API
+  image (Docker could not apt-get inside this sandbox, so the image is verified in CI).

@@ -1,5 +1,5 @@
 import type { IIssueReportRepository } from '@modules/reporting/domain/report.repository';
-import type { IOrderRepository } from '@modules/ordering';
+import type { IOrderRepository, OrderStatsFilter } from '@modules/ordering';
 import type {
   CreateIssueInput,
   UpdateIssueInput,
@@ -68,23 +68,15 @@ export class ReportService {
     await this.issues.softDelete(id);
   }
 
-  private paidMatch(from?: string, to?: string) {
-    const match: Record<string, unknown> = {
-      'payment.status': 'paid',
-      deletedAt: null,
+  private paidFilter(from?: string, to?: string): OrderStatsFilter {
+    return {
+      ...(from ? { paidFrom: new Date(from) } : {}),
+      ...(to ? { paidTo: new Date(to) } : {}),
     };
-    if (from || to) {
-      const range: Record<string, Date> = {};
-      if (from) range.$gte = new Date(from);
-      if (to) range.$lte = new Date(to);
-      match['payment.paidAt'] = range;
-    }
-    return match;
   }
 
   async revenueSummary(from?: string, to?: string) {
-    const match = this.paidMatch(from, to);
-    return this.orders.aggregateRevenue(match);
+    return this.orders.aggregateRevenue(this.paidFilter(from, to));
   }
 
   async ordersByStatus() {
@@ -92,13 +84,11 @@ export class ReportService {
   }
 
   async topProducts(from?: string, to?: string, limit = 10) {
-    const match = this.paidMatch(from, to);
-    return this.orders.aggregateTopProducts(match, Math.min(limit, 50));
+    return this.orders.aggregateTopProducts(this.paidFilter(from, to), Math.min(limit, 50));
   }
 
   async salesByDate(from?: string, to?: string) {
-    const match = this.paidMatch(from, to);
-    return this.orders.aggregateSalesByDate(match);
+    return this.orders.aggregateSalesByDate(this.paidFilter(from, to));
   }
 
   private toResponse(issue: IssueReport) {
