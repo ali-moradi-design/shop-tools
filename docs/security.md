@@ -37,8 +37,9 @@ database. The automated part is kept as regression tests in
 Checked and fine (all covered by tests): anonymous and customer calls to admin routes get 401/403;
 registration cannot pick a role; one customer cannot read or pay another's order; client prices
 and totals are ignored; quantities below 1, fractional or huge are refused; spec filters, search
-and sort accept only a strict grammar (unknown keys, units, duplicates, more than 20 filters,
-values over 100 characters and `__proto__` keys are a 400), and values are bound parameters; the
+and sort accept only a strict grammar (unknown keys and units, specs that are not filterable for the category, duplicates,
+values over 120 characters and `__proto__` keys are a 400; a category has about ten specs, so the number of
+filters is bounded), and values are bound parameters; the
 tables are intact after the injection attempts; login brute force gets 429; the foreign-origin
 check blocks cookie writes; error bodies carry no stack traces; compare takes 2–4 slugs only.
 **Concurrency:** 8 customers paying at once for the last 2 units (in two warehouses): exactly 2
