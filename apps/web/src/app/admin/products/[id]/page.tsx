@@ -7,6 +7,7 @@ import { AdminNav, ProductEditor } from '@/features/admin';
 import { requireAdmin } from '@/features/auth/server';
 import { ApiError } from '@/shared/api';
 import { serverApi } from '@/shared/api/server';
+import { fetchWarehouses } from '@/entities/category';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -14,6 +15,7 @@ async function Editor({ params }: Props) {
   const { id } = await params;
   await requireAdmin(`/admin/products/${id}`);
   let product: Product;
+  const warehouses = await fetchWarehouses();
   try {
     product = (await serverApi<{ data: Product }>(`/products/${encodeURIComponent(id)}`)).data;
   } catch (err) {
@@ -29,7 +31,7 @@ async function Editor({ params }: Props) {
           <Link href={`/products/${product.slug}`} className="link-underline text-[13px] text-mute">View in shop</Link>
         </div>
       </div>
-      <ProductEditor product={product} />
+      <ProductEditor product={product} warehouses={warehouses} />
     </>
   );
 }

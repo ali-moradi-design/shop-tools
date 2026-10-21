@@ -19,21 +19,21 @@ async function Products({ searchParams }: Props) {
     <>
       <form className="mb-6 flex max-w-md border-b border-ink" role="search">
         <label htmlFor="admin-q" className="sr-only">Search products</label>
-        <input id="admin-q" name="q" defaultValue={q} placeholder="Search by name or color" className="min-w-0 flex-1 bg-transparent py-2 outline-none" />
+        <input id="admin-q" name="q" defaultValue={q} placeholder="Search by name, brand or SKU" className="min-w-0 flex-1 bg-transparent py-2 outline-none" />
         <button type="submit" className="eyebrow">Search</button>
       </form>
       <table className="w-full text-left text-[14px]">
         <thead className="border-b border-line text-[11px] uppercase tracking-[0.16em] text-mute">
-          <tr><th className="py-3 font-medium" colSpan={2}>Product</th><th className="font-medium">Category</th><th className="font-medium">Price</th><th className="font-medium">Stock</th><th /></tr>
+          <tr><th className="py-3 font-medium" colSpan={2}>Product</th><th className="font-medium">Category</th><th className="font-medium">Price</th><th className="font-medium">Stock (BER · HAM · MUC)</th><th /></tr>
         </thead>
         <tbody>
           {data.map((p) => (
             <tr key={p.id} className="border-b border-line">
               <td className="w-14 py-2"><div className="relative h-12 w-12 bg-soft">{p.images[0] && <Image src={p.images[0]} alt="" fill sizes="48px" className="object-contain" />}</div></td>
               <td>{p.title}</td>
-              <td className="capitalize">{p.gender} · {p.category}</td>
+              <td>{p.categoryName}</td>
               <td>{formatMoney(p.price)}</td>
-              <td className={p.stock <= 5 ? 'text-danger' : ''}>{p.stock}</td>
+              <td className={p.stock <= 5 ? 'text-danger' : ''}>{p.stock} <span className="font-mono text-[12px] text-mute">({p.warehouses.map((w) => w.quantity).join(' · ')})</span></td>
               <td className="text-right"><Link className="link-underline" href={`/admin/products/${p.id}`}>Edit</Link></td>
             </tr>
           ))}

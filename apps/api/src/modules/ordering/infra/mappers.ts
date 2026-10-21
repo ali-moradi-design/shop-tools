@@ -2,7 +2,12 @@ import type { Prisma } from '@prisma/client';
 import type { Order } from '../domain/order.entity';
 import type { Cart } from '../domain/cart.entity';
 
-export type OrderRow = Prisma.OrderGetPayload<{ include: { items: true; history: true } }>;
+export const orderInclude = {
+  items: { include: { allocations: { include: { warehouse: true } } } },
+  history: true,
+} satisfies Prisma.OrderInclude;
+
+export type OrderRow = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 export type CartRow = Prisma.CartGetPayload<{ include: { items: true } }>;
 
 export function mapOrder(row: OrderRow): Order {
@@ -14,12 +19,14 @@ export function mapOrder(row: OrderRow): Order {
       .map((i) => ({
         product: i.productId,
         sku: i.sku,
-        size: i.size,
-        width: i.width ?? undefined,
+        label: i.label,
         title: i.title,
         image: i.image ?? undefined,
         price: i.price,
         quantity: i.quantity,
+        ...(i.allocations.length
+          ? { allocations: i.allocations.map((a) => ({ warehouse: a.warehouse.code, quantity: a.quantity })) }
+          : {}),
       })),
     subtotalAmount: row.subtotalAmount,
     discountCode: row.discountCode ?? undefined,

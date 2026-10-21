@@ -1,6 +1,7 @@
 import type { ICartRepository } from '@modules/ordering/domain/cart.repository';
 import type { Cart, CartItem } from '@modules/ordering/domain/cart.entity';
-import { getPrisma, prisma, type PrismaTx } from '@shared/infra/prisma/client';
+import { getPrisma, type PrismaTx } from '@shared/infra/prisma/client';
+import { runInTransaction } from '@shared/infra/prisma/transaction';
 import { mapCart } from './mappers';
 
 const withItems = { items: true } as const;
@@ -29,11 +30,6 @@ async function replaceLines(tx: PrismaTx, cartId: string, items: CartItem[]): Pr
   await tx.cart.update({ where: { id: cartId }, data: { updatedAt: new Date() } });
 }
 
-function inTransaction<T>(fn: (tx: PrismaTx) => Promise<T>): Promise<T> {
-  const client = getPrisma();
-  return client === prisma ? prisma.$transaction((tx) => fn(tx)) : fn(client);
-}
-
 export class PrismaCartRepository implements ICartRepository {
   async findByOwner(owner: string): Promise<Cart | null> {
     const row = await getPrisma().cart.findUnique({ where: { owner }, include: withItems });
@@ -51,7 +47,7 @@ export class PrismaCartRepository implements ICartRepository {
   }
 
   async save(cart: Cart): Promise<Cart> {
-    return inTransaction(async (tx) => {
+    return runInTransaction(async (tx) => {
       const existing = await tx.cart.findUnique({ where: { id: cart.id }, select: { id: true } });
       if (!existing) throw new Error('Cart not found');
       await replaceLines(tx, cart.id, cart.items);
@@ -60,7 +56,7 @@ export class PrismaCartRepository implements ICartRepository {
   }
 
   async setItems(owner: string, items: CartItem[]): Promise<Cart> {
-    return inTransaction(async (tx) => {
+    return runInTransaction(async (tx) => {
       const cart = await tx.cart.upsert({ where: { owner }, update: {}, create: { owner } });
       await replaceLines(tx, cart.id, items);
       return mapCart(await tx.cart.findUniqueOrThrow({ where: { id: cart.id }, include: withItems }));
@@ -68,7 +64,7 @@ export class PrismaCartRepository implements ICartRepository {
   }
 
   async clear(owner: string): Promise<Cart | null> {
-    return inTransaction(async (tx) => {
+    return runInTransaction(async (tx) => {
       const cart = await tx.cart.findUnique({ where: { owner }, select: { id: true } });
       if (!cart) return null;
       await replaceLines(tx, cart.id, []);

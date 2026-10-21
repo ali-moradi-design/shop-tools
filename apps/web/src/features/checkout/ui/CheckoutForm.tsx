@@ -74,7 +74,7 @@ export function CheckoutForm({ name }: { name: string }) {
         <label>Postal code<input name="postalCode" required autoComplete="postal-code" className={field} /></label>
         <label>Country<input name="country" required defaultValue="United States" autoComplete="country-name" className={field} /></label>
       </form>
-      <aside className="self-start border border-line bg-soft p-6" aria-label="Order summary">
+      <aside className="self-start border border-line bg-white p-6" aria-label="Order summary">
         <h2 className="heading text-[22px]">Order summary</h2>
         {!quote ? (
           <p className="mt-4 text-mute">Loading…</p>
@@ -84,7 +84,7 @@ export function CheckoutForm({ name }: { name: string }) {
               {quote.items.map((i) => (
                 <li key={i.productId + i.sku} className="grid grid-cols-[56px_1fr_auto] items-center gap-3 text-[14px]">
                   <div className="relative h-14 bg-white">{i.image && <Image src={i.image} alt="" fill sizes="56px" className="object-contain" />}</div>
-                  <div>{i.title}<div className="text-mute">Size {i.size} · Qty {i.quantity}</div></div>
+                  <div>{i.title}<div className="text-mute">{i.label} · Qty {i.quantity}</div></div>
                   <div>{formatMoney(i.price * i.quantity)}</div>
                 </li>
               ))}

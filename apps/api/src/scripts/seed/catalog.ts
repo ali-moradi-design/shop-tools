@@ -1,25 +1,30 @@
 import type { repos } from '../../shared/composition/repos';
-import type { CreateProductInput } from '../../modules/catalog';
-import products from './data/products.json';
+import { CATEGORIES, WAREHOUSES } from './catalog/taxonomy';
+import { generateCatalog, FEATURED_COUNT } from './catalog/generate';
 
 type Repos = typeof repos;
 
-/** How many products (in catalog order) are marked as featured on the home page. */
-export const FEATURED_COUNT = 16;
+export { FEATURED_COUNT };
 
-export const SEED_PRODUCTS = products as CreateProductInput[];
+/**
+ * Warehouses, categories with their specification definitions, then the products.
+ * `minimalProducts` (tests): three products per category, so every category is covered
+ * but the run stays fast.
+ */
+export async function seedCatalog(repos: Repos, options: { minimalProducts?: boolean } = {}): Promise<void> {
+  for (const w of WAREHOUSES) await repos.warehouses.upsert(w);
+  for (const c of CATEGORIES) await repos.categories.upsert(c);
 
-export async function seedCatalog(
-  repos: Repos,
-  options: { minimalProducts?: boolean } = {},
-): Promise<void> {
-  const productsToSeed = options.minimalProducts ? SEED_PRODUCTS.slice(0, 6) : SEED_PRODUCTS;
-  for (const [i, p] of productsToSeed.entries()) {
-    await repos.products.upsertBySlug(p.slug, {
-      ...p,
-      currency: 'USD',
-      featured: i < FEATURED_COUNT,
-      featuredOrder: i,
+  let products = generateCatalog();
+  if (options.minimalProducts) {
+    const seen = new Map<string, number>();
+    products = products.filter((p) => {
+      const n = (seen.get(p.category) ?? 0) + 1;
+      seen.set(p.category, n);
+      return n <= 3;
     });
+  }
+  for (const p of products) {
+    await repos.products.upsertBySlug(p.slug, { ...p, currency: 'USD' });
   }
 }

@@ -10,9 +10,12 @@ test('every page is rendered per request with its own CSP nonce and is not cache
   expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
   expect(first!.headers()['cache-control'] ?? '').toMatch(/no-store|no-cache|private/);
 
-  // Next.js put the nonce on the scripts it renders (JSON-LD data blocks never execute)
-  expect(await page.locator('script[nonce]').count()).toBeGreaterThan(0);
-  expect(await page.locator('script:not([nonce]):not([type="application/ld+json"])').count()).toBe(0);
+  // Next.js put the nonce on every script in the HTML it sent (JSON-LD data blocks never execute).
+  // The server's HTML is checked, not the live DOM: scripts added later by the loader are allowed by the browser through the nonce too.
+  const html = await first!.text();
+  const scripts = [...html.matchAll(/<script\b[^>]*>/g)].map((m) => m[0]).filter((tag) => !tag.includes('application/ld+json'));
+  expect(scripts.length).toBeGreaterThan(0);
+  expect(scripts.filter((tag) => !tag.includes(`nonce="${nonce}"`))).toEqual([]);
 
   const second = await page.goto('/about');
   const nonce2 = /'nonce-([^']+)'/.exec(second!.headers()['content-security-policy'] ?? '')?.[1];

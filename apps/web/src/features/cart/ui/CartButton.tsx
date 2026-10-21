@@ -16,7 +16,7 @@ export function CartButton() {
     >
       <Icon name="bag" width={21} height={21} />
       {count > 0 && (
-        <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[10px] text-white">
+        <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center bg-accent px-1 font-mono text-[10px] font-semibold text-accent-ink">
           {count}
         </span>
       )}

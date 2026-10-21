@@ -2,6 +2,7 @@ import { authPaths } from '@modules/identity/http/docs/auth.paths';
 import { usersPaths } from '@modules/identity/http/docs/users.paths';
 import { rbacPaths } from '@modules/identity/http/docs/rbac.paths';
 import { productsPaths } from '@modules/catalog/http/docs/products.paths';
+import { categoriesPaths } from '@modules/catalog/http/docs/categories.paths';
 import { uploadsPaths } from '@modules/catalog/http/docs/uploads.paths';
 import { cartPaths } from '@modules/ordering/http/docs/cart.paths';
 import { ordersPaths } from '@modules/ordering/http/docs/orders.paths';
@@ -16,9 +17,9 @@ import { shopSchemas } from './shop.schemas';
 export const openApiSpec = {
   openapi: "3.0.3",
   info: {
-  "title": "Welt & Grain API",
+  "title": "Toolbench API",
   "version": "2.0.0",
-  "description": "Tools shop API (Express 5 + MySQL, modular monolith). Products are one style in one color with per-size variants and stock (reworked for tools in later steps); all money is in minor units (cents). Auth: Bearer header or httpOnly cookies. Visitors get a guest cart (httpOnly guestCart cookie) that is merged at sign-in. Cookie-authenticated writes must come from an allowed origin (CORS_ORIGIN). Business routes are under /api/v1."
+  "description": "Tools shop API (Express 5 + MySQL, modular monolith). Products belong to a category that defines their technical specifications (filter with `spec.<key>=<value>`, ranges and units supported); each product has variants (kits) with stock per warehouse; up to four products can be compared. All money is in minor units (cents). Auth: Bearer header or httpOnly cookies. Visitors get a guest cart (httpOnly guestCart cookie) that is merged at sign-in. Cookie-authenticated writes must come from an allowed origin (CORS_ORIGIN). Business routes are under /api/v1."
 },
   servers: [
   {
@@ -176,6 +177,7 @@ export const openApiSpec = {
   paths: {
     ...authPaths,
     ...productsPaths,
+    ...categoriesPaths,
     ...cartPaths,
     ...ordersPaths,
     ...discountsPaths,

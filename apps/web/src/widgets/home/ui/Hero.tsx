@@ -1,22 +1,30 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-export function Hero() {
+export function Hero({ productCount, categoryCount }: { productCount: number; categoryCount: number }) {
   return (
-    <section className="relative h-[560px] sm:h-[680px] lg:h-[790px]">
-      <Image src="/media/dualgender.jpg" alt="Two people walking in leather boots" fill priority sizes="100vw" className="object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-transparent" />
-      <div className="absolute bottom-12 left-6 text-white sm:bottom-[74px] sm:left-[73px]">
-        <p className="eyebrow">Handcrafted with integrity</p>
-        <h1 className="heading mt-3 mb-7 text-[40px] leading-[1.12] sm:text-[64px]">
-          Full-Grain Leather.
-          <br />
-          Honest Prices.
+    <section className="grid border-b-2 border-ink bg-white lg:grid-cols-[1.05fr_1fr]">
+      <div className="flex flex-col justify-center gap-5 px-4 py-12 sm:px-8 lg:py-16">
+        <span className="tag tag-accent self-start">New — filter by real specs</span>
+        <h1 className="heading text-[56px] leading-[0.92] sm:text-[84px]">
+          The right spec.<br />In stock<br />today.
         </h1>
-        <div className="flex flex-wrap gap-1.5">
-          <Link href="/collections/mens-boots" className="btn btn-light">Shop Men</Link>
-          <Link href="/collections/womens-boots" className="btn btn-light">Shop Women</Link>
+        <p className="max-w-xl text-[17px] text-steel">
+          Filter by torque, voltage, power or size — with ranges and your units. Compare up to four tools side by side and
+          see what each warehouse has on the shelf.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/categories/drills" className="btn">Shop drills →</Link>
+          <Link href="/compare" className="btn btn-outline">Compare tools</Link>
         </div>
+        <p className="flex gap-6 font-mono text-[12px] text-steel">
+          <span>▪ {productCount} products</span>
+          <span>▪ {categoryCount} categories</span>
+          <span>▪ 3 warehouses</span>
+        </p>
+      </div>
+      <div className="relative min-h-[320px] border-t-2 border-ink bg-white lg:border-l-2 lg:border-t-0">
+        <Image src="/catalog/dhs780t2-gb.webp" alt="A mitre saw with two batteries" fill priority sizes="(min-width: 1024px) 50vw, 100vw" className="object-contain p-6" />
       </div>
     </section>
   );

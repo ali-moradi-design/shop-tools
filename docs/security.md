@@ -18,7 +18,38 @@ deployment. Every finding below is fixed unless marked as accepted.
 | 11 | Low | The shared demo customer can see orders other visitors placed with it | Checkout warns not to enter real data; the nightly reset deletes all orders |
 | 12 | Low | Public review list exposed reviewers' emails | Fixed earlier (PR #9): name only |
 
-Deploy hardening in `deploy/compose.yaml`: MongoDB with auth, no published port and
+## Security test of the tools shop (2026-10-21)
+
+Run after the MySQL, SSR and tools-catalog work. Method: dependency audit, response-header
+check, an active probe of the running API (anonymous and customer access to admin routes,
+mass assignment, IDOR, SQL injection through every new query parameter, prototype pollution,
+oversized and malformed bodies, brute force, CSRF), and a concurrency test on the real
+database. The automated part is kept as regression tests in
+`apps/api/tests/integration/security.test.ts` (55 tests) and `apps/web/e2e` (invalid filter URL).
+
+| # | Severity | Finding | Fix |
+| --- | --- | --- | --- |
+| 13 | Medium | Server-side renders called the API from the storefront's own address, so all visitors shared one rate-limit budget (300 requests per 15 minutes): a few visitors could lock everyone out of the catalog | Server-side fetches forward the visitor IP (`shared/api/visitor-ip.ts`); the limit is `RATE_LIMIT_MAX` (default 1000); the E2E run lifts it |
+| 14 | Low | Invalid JSON and bodies over 1 MB returned `500 Internal server error` (and logged an error each time) | The error handler answers Express's own 4xx errors with 400 / 413 and a generic message |
+| 15 | Medium | Express 5 made `req.query` read-only: `validate()` silently dropped the parsed query, so validated defaults and limits were not applied | `validate()` redefines the property; regression test |
+| 16 | Low | A hand-edited URL the API refuses (`spec.torque=abc`) crashed the category page with an error | The grid shows "These filters are not valid" with a clear link |
+
+Checked and fine (all covered by tests): anonymous and customer calls to admin routes get 401/403;
+registration cannot pick a role; one customer cannot read or pay another's order; client prices
+and totals are ignored; quantities below 1, fractional or huge are refused; spec filters, search
+and sort accept only a strict grammar (unknown keys and units, specs that are not filterable for the category, duplicates,
+values over 120 characters and `__proto__` keys are a 400; a category has about ten specs, so the number of
+filters is bounded), and values are bound parameters; the
+tables are intact after the injection attempts; login brute force gets 429; the foreign-origin
+check blocks cookie writes; error bodies carry no stack traces; compare takes 2–4 slugs only.
+**Concurrency:** 8 customers paying at once for the last 2 units (in two warehouses): exactly 2
+payments succeed, 6 get `409`, no stock level goes negative, and exactly 2 allocations are stored.
+
+Accepted: `deepmerge-ts` (high, stack exhaustion) is reached only through the Prisma CLI's own
+config loader (`prisma migrate deploy` at start-up); it never sees user input and no patched
+version is available for the pinned Prisma line. Re-check when Prisma is upgraded.
+
+Deploy hardening in `deploy/compose.yaml`: MySQL with its own user and password, no published port and
 an internal network; API on the internal network only, read-only filesystem,
 `no-new-privileges`; only the web port is published, on `127.0.0.1`.
 
@@ -29,11 +60,11 @@ an internal network; API on the internal network only, read-only filesystem,
 - All request bodies, params and queries validated with zod; search terms are
   length-limited, and `%`, `_` and `\` are escaped before the SQL `LIKE`; all SQL goes through Prisma (parameterized) or tagged `$queryRaw` templates; page size ≤ 100.
 - Prices and stock always come from the catalog at checkout and payment; stock is
-  taken atomically per size; order access is checked per user.
+  taken per warehouse inside one transaction with row locks (`SELECT … FOR UPDATE`); order access is checked per user.
 - Cookies are httpOnly, `Secure` in production, SameSite=Lax; the guest cart id is
   a random UUID.
 - The admin area is checked on the server (role) and every admin call is checked
-  again by the API (permissions); the cache-refresh server action checks the role.
+  again by the API (permissions).
 - JSON-LD is escaped; React escapes all user text (reviews, names).
 - `next/image` only optimizes images from the product CDN path.
 - No secrets in the repository (`.env` files are ignored).

@@ -3,24 +3,22 @@ import { expect, test } from '@playwright/test';
 const DEMO = { email: 'demo@shop-tools.local', password: 'Demo123!' };
 const ADMIN = { email: 'admin@shop-tools.local', password: 'Admin123!' };
 
-test('browse → cart → fake payment → order visible in admin', async ({ browser }) => {
+test('browse → cart → fake payment → order shows its warehouse → order visible in admin', async ({ browser }) => {
   const shopper = await browser.newPage();
 
-  // browse a collection and filter by size
-  await shopper.goto('/collections/mens-boots');
-  await shopper.locator('summary:visible', { hasText: /^Size/ }).click();
-  await shopper.locator('details[open]').getByRole('button', { name: '10', exact: true }).click();
-  await expect(shopper).toHaveURL(/size=10/);
-  await shopper.getByTestId('product-card').first().click();
+  // browse a category, keep only what is in stock, open the first product
+  await shopper.goto('/categories/drills?instock=1');
+  await expect(shopper.getByTestId('product-card').first()).toBeVisible();
+  await shopper.getByTestId('product-card').first().getByRole('link').first().click();
 
-  // pick a size and add to cart
-  // the listing is cached for a while, so take any size that is in stock right now
-  await shopper.locator('[role=radio]:not([disabled])').first().click();
+  // the product page lists the stock of every warehouse
+  await expect(shopper.getByTestId('warehouse-stock')).toBeVisible();
+  await expect(shopper.locator('[data-warehouse]')).toHaveCount(3);
   await shopper.getByTestId('add-to-cart').click();
   const drawer = shopper.getByTestId('cart-drawer');
   await expect(drawer).toBeVisible();
   await expect(drawer.getByTestId('cart-line')).toHaveCount(1);
-  const title = (await drawer.getByTestId('cart-line').getByRole('link').innerText()).trim();
+  const title = (await drawer.getByTestId('cart-line').getByRole('link').first().innerText()).trim();
 
   // checkout needs an account: sign in with the demo customer, cart follows
   await drawer.getByRole('link', { name: 'Checkout' }).click();
@@ -29,9 +27,9 @@ test('browse → cart → fake payment → order visible in admin', async ({ bro
   await shopper.getByLabel('Password').fill(DEMO.password);
   await shopper.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(shopper).toHaveURL(/\/checkout/);
-  await expect(shopper.getByText(title)).toBeVisible();
+  await expect(shopper.getByText(title).first()).toBeVisible();
 
-  await shopper.getByLabel('Address', { exact: true }).fill('1 Leather Lane');
+  await shopper.getByLabel('Address', { exact: true }).fill('1 Workshop Road');
   await shopper.getByLabel('City').fill('Berlin');
   await shopper.getByLabel('Postal code').fill('10115');
   await shopper.getByRole('button', { name: 'Continue to payment' }).click();
@@ -45,7 +43,9 @@ test('browse → cart → fake payment → order visible in admin', async ({ bro
   await shopper.getByRole('button', { name: /^Pay \$/ }).click();
   await expect(shopper).toHaveURL(/paid=1/);
   await expect(shopper.getByTestId('order-status')).toHaveText(/paid/i);
-  const orderNo = (await shopper.getByRole('heading', { level: 1 }).innerText()).replace('Order ', '');
+  // the paid order remembers which warehouse the units came from
+  await expect(shopper.locator('[data-testid=order-allocations]:visible')).toContainText(/Shipped from/);
+  const orderNo = (await shopper.getByRole('heading', { level: 1 }).innerText()).replace(/^order\s*/i, '');
 
   // the admin sees the order
   const admin = await (await browser.newContext()).newPage();

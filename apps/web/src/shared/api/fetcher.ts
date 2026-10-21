@@ -1,5 +1,6 @@
 import { API_V1 } from '@/shared/config';
 import { ApiError } from './types';
+import { visitorIpHeaders } from './visitor-ip';
 
 export type FetchInit = RequestInit;
 
@@ -11,6 +12,7 @@ export async function apiGetJson<T>(path: string, init?: FetchInit): Promise<T> 
     ...init,
     headers: {
       Accept: 'application/json',
+      ...(await visitorIpHeaders()),
       ...(init?.headers ?? {}),
     },
   });

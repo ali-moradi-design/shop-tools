@@ -6,15 +6,9 @@ import type {
   OrderStatus,
   Payment,
 } from '@modules/ordering/domain/order.entity';
-import { getPrisma, prisma, type PrismaTx } from '@shared/infra/prisma/client';
-import { mapOrder } from './mappers';
-
-const include = { items: true, history: true } as const;
-
-function inTransaction<T>(fn: (tx: PrismaTx) => Promise<T>): Promise<T> {
-  const client = getPrisma();
-  return client === prisma ? prisma.$transaction((tx) => fn(tx)) : fn(client);
-}
+import { getPrisma } from '@shared/infra/prisma/client';
+import { runInTransaction } from '@shared/infra/prisma/transaction';
+import { mapOrder, orderInclude as include } from './mappers';
 
 /** Paid, not deleted, optionally limited by status and paid-at window. */
 function statsWhere(filter: OrderStatsFilter): Prisma.OrderWhereInput {
@@ -75,8 +69,7 @@ export class PrismaOrderRepository implements IOrderRepository {
           create: input.items.map((i, position) => ({
             productId: i.product,
             sku: i.sku,
-            size: i.size,
-            width: i.width,
+            label: i.label,
             title: i.title,
             image: i.image,
             price: i.price,
@@ -93,7 +86,7 @@ export class PrismaOrderRepository implements IOrderRepository {
 
   /** Writes status, payment, totals and the whole status history of the order. */
   async save(order: Order): Promise<Order> {
-    return inTransaction(async (tx) => {
+    return runInTransaction(async (tx) => {
       const existing = await tx.order.findUnique({ where: { id: order.id }, select: { id: true } });
       if (!existing) throw new Error('Order not found');
       await tx.order.update({
@@ -128,7 +121,7 @@ export class PrismaOrderRepository implements IOrderRepository {
     payment?: Partial<Payment>,
     note?: string,
   ): Promise<Order | null> {
-    return inTransaction(async (tx) => {
+    return runInTransaction(async (tx) => {
       const existing = await tx.order.findFirst({ where: { id, deletedAt: null }, select: { id: true } });
       if (!existing) return null;
       await tx.order.update({
@@ -142,6 +135,26 @@ export class PrismaOrderRepository implements IOrderRepository {
         },
       });
       return mapOrder(await tx.order.findUniqueOrThrow({ where: { id }, include }));
+    });
+  }
+
+  async recordAllocations(
+    orderId: string,
+    allocations: { product: string; sku: string; warehouse: string; quantity: number }[],
+  ): Promise<void> {
+    await runInTransaction(async (tx) => {
+      const [items, warehouses] = await Promise.all([
+        tx.orderItem.findMany({ where: { orderId }, select: { id: true, productId: true, sku: true } }),
+        tx.warehouse.findMany({ select: { id: true, code: true } }),
+      ]);
+      const itemId = new Map(items.map((i) => [`${i.productId}\u0000${i.sku}`, i.id]));
+      const warehouseId = new Map(warehouses.map((w) => [w.code, w.id]));
+      const rows = allocations.flatMap((a) => {
+        const orderItemId = itemId.get(`${a.product}\u0000${a.sku}`);
+        const wid = warehouseId.get(a.warehouse);
+        return orderItemId && wid ? [{ orderItemId, warehouseId: wid, quantity: a.quantity }] : [];
+      });
+      if (rows.length) await tx.orderItemAllocation.createMany({ data: rows });
     });
   }
 

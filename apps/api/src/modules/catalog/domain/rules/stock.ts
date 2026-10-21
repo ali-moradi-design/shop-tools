@@ -27,7 +27,7 @@ export function assertSufficientStock(
 export function findVariant(product: Product, sku: string): ProductVariant {
   const variant = product.variants.find((v) => v.sku === sku);
   if (!variant) {
-    throw new DomainError(`Size not available for "${product.title}"`, 'NOT_FOUND');
+    throw new DomainError(`Option not available for "${product.title}"`, 'NOT_FOUND');
   }
   return variant;
 }

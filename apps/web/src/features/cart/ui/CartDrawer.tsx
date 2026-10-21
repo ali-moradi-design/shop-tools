@@ -9,9 +9,9 @@ import { formatMoney } from '@/shared/lib/money';
 import { Icon } from '@/shared/ui/Icon';
 import { useCart } from '../model/CartProvider';
 
-const UPSELL_CATEGORIES = ['belts', 'care', 'wallets'] as const;
+const UPSELL_CATEGORIES = ['batteries', 'accessories', 'bits'] as const;
 
-/** Right side sheet like the reference: "Customers Also Bought" + "Your Cart". */
+/** Right side sheet like the reference: "Also needed" + "Your Cart". */
 export function CartDrawer() {
   const { cart, open, setOpen, busy, error, update, remove } = useCart();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -43,8 +43,8 @@ export function CartDrawer() {
         className="absolute inset-y-0 right-0 flex w-full max-w-[700px] bg-white"
         data-testid="cart-drawer"
       >
-        <aside aria-label="Customers also bought" className="hidden w-[250px] shrink-0 overflow-y-auto bg-soft px-3 py-5 sm:block">
-          <h2 className="mb-3.5 text-[15px]">Customers Also Bought</h2>
+        <aside aria-label="Also needed" className="hidden w-[250px] shrink-0 overflow-y-auto bg-soft px-3 py-5 sm:block">
+          <h2 className="mb-3.5 text-[15px]">Also needed</h2>
           {upsells.map((p) => (
             <Upsell key={p.id} product={p} />
           ))}
@@ -57,16 +57,16 @@ export function CartDrawer() {
             </button>
           </div>
           <p className="flex items-center gap-2.5 border-b border-line py-4 text-[14.5px]">
-            <span className="grid h-4 w-4 place-items-center rounded-full bg-ink text-white">
+            <span className="grid h-4 w-4 place-items-center bg-ink text-white">
               <Icon name="check" width={10} height={10} strokeWidth={3} />
             </span>
-            Free shipping and returns on your order
+            Free shipping over $150 · ships from the nearest warehouse
           </p>
           {error && <p role="alert" className="mt-3 text-[14px] text-danger">{error}</p>}
           {items.length === 0 ? (
             <div className="py-16 text-center">
               <p className="heading text-[22px]">Your cart is empty.</p>
-              <Link href="/collections/mens-boots" className="btn mt-6" onClick={() => setOpen(false)}>Shop boots</Link>
+              <Link href="/categories/drills" className="btn mt-6" onClick={() => setOpen(false)}>Shop drills</Link>
             </div>
           ) : (
             <>
@@ -79,8 +79,8 @@ export function CartDrawer() {
                     <div>
                       <Link href={`/products/${line.slug}`} onClick={() => setOpen(false)} className="hover:underline">{line.title}</Link>
                       <div>{formatMoney(line.price)}</div>
-                      <div>Size: {line.size}{line.width ? ` · ${line.width}` : ''}</div>
-                      <span className="my-1 inline-block bg-[#8a8a8a] px-1.5 text-[13px] text-white">Free returns</span>
+                      <div className="font-mono text-[12px] text-steel">{line.label}</div>
+                      <span className="tag my-1">30-day returns</span>
                       <div className="flex items-center gap-3">
                         <span>Qty:</span>
                         <span className="inline-flex border border-line">
@@ -134,20 +134,19 @@ function Upsell({ product }: { product: Product }) {
       <div className="relative mx-auto mb-2 h-24 w-24">
         {product.images[0] && <Image src={product.images[0]} alt="" fill sizes="96px" className="object-contain" />}
       </div>
-      <div>{product.name}</div>
-      <div className="text-mute">{product.color}</div>
-      <div>{formatMoney(product.price)}</div>
+      <div className="font-semibold leading-tight">{product.title}</div>
+      <div className="font-mono text-[12px]">{formatMoney(product.price)}</div>
       {inStock.length > 1 && (
         <label className="mt-1.5 flex items-center justify-center gap-2">
-          Size
-          <select className="border border-line px-1" value={sku} onChange={(e) => setSku(e.target.value)}>
+          Option
+          <select className="border border-ink px-1" value={sku} onChange={(e) => setSku(e.target.value)}>
             {inStock.map((v) => (
-              <option key={v.sku} value={v.sku}>{v.size}</option>
+              <option key={v.sku} value={v.sku}>{v.label}</option>
             ))}
           </select>
         </label>
       )}
-      <button type="button" disabled={busy || !sku} onClick={() => add(product.id, sku)} className="mt-1.5 block w-full underline underline-offset-[3px]">
+      <button type="button" disabled={busy || !sku} onClick={() => add(product.id, sku)} className="mt-1.5 block w-full font-mono text-[12px] uppercase underline underline-offset-[3px]">
         Add To Cart
       </button>
     </div>

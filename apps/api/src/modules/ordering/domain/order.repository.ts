@@ -21,6 +21,11 @@ export interface IOrderRepository {
     payment?: Partial<Payment>,
     note?: string,
   ): Promise<Order | null>;
+  /** Records which warehouse each paid unit came from (one entry per product, sku and warehouse). */
+  recordAllocations(
+    orderId: string,
+    allocations: { product: string; sku: string; warehouse: string; quantity: number }[],
+  ): Promise<void>;
   count(): Promise<number>;
   aggregateRevenue(filter: OrderStatsFilter): Promise<{
     totalRevenue: number;

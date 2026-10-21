@@ -36,10 +36,10 @@ export interface CartLineView extends CartItem {
   slug: string;
   title: string;
   image?: string;
-  size: string;
-  width?: string;
+  /** Variant label, e.g. "2 × 4.0 Ah kit". */
+  label: string;
   price: number;
-  /** Stock left in this size. */
+  /** Units left in all warehouses. */
   available: number;
 }
 

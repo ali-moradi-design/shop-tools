@@ -10,7 +10,7 @@ import {
 import type { Order, ShippingAddress } from '@modules/ordering/domain/order.entity';
 import type { DiscountService } from '@modules/promotions';
 import { DomainError } from '@shared/domain/DomainError';
-import { assertPositiveQuantity, assertSufficientStock, findVariant } from '@modules/catalog';
+import { assertPositiveQuantity, assertSufficientStock, findVariant, unitPrice } from '@modules/catalog';
 import {
   setCartItemQuantity,
   removeCartItem,
@@ -108,9 +108,8 @@ export class CartService {
         slug: product.slug,
         title: product.title,
         image: product.images[0],
-        size: variant.size,
-        width: variant.width,
-        price: product.price,
+        label: variant.label,
+        price: unitPrice(product, variant),
         available: variant.stock,
       });
     }

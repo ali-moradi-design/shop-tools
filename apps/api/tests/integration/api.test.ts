@@ -12,16 +12,13 @@ import {
 function newProduct(slug: string, stock: number) {
   return {
     slug: `${slug}-${Date.now()}`,
-    title: 'Test Boot | Black',
-    name: 'Test Boot',
-    style: `test-${slug}`,
-    color: 'Black',
-    colorFamily: 'Black',
-    category: 'boots',
-    gender: 'men',
+    title: 'Test Drill Driver 18 V',
+    brand: 'TESTCO',
+    category: 'drills',
     description: 'Created in integration test',
     price: 1999,
-    variants: [{ sku: 'TEST-10', size: '10', stock }],
+    variants: [{ sku: `TEST-${slug}-${Date.now()}`, label: 'Standard', stock: { BER: stock } }],
+    specs: { voltage: 18, torque: 60 },
   };
 }
 
@@ -31,7 +28,7 @@ function inStockSku(product: { variants: { sku: string; stock: number }[] }, qty
   return variant.sku;
 }
 
-describe('Welt & Grain API (integration)', () => {
+describe('Toolbench API (integration)', () => {
   let ctx: TestContext;
 
   beforeAll(async () => {
@@ -51,13 +48,13 @@ describe('Welt & Grain API (integration)', () => {
   });
 
   describe('API docs', () => {
-    it('describes the leather catalog, not the old bookshop', async () => {
+    it('describes the tools catalog, not the old bookshop or the leather shop', async () => {
       const res = await ctx.request.get('/api/docs.json').expect(200);
       expect(Object.keys(res.body.paths)).toEqual(
-        expect.arrayContaining(['/api/v1/products/facets', '/api/v1/cart/items/{productId}/{sku}', '/api/v1/cart/quote']),
+        expect.arrayContaining(['/api/v1/products/facets', '/api/v1/products/compare', '/api/v1/categories', '/api/v1/warehouses', '/api/v1/cart/items/{productId}/{sku}', '/api/v1/cart/quote']),
       );
       expect(res.body.components.schemas.ProductInput.properties).toHaveProperty('variants');
-      expect(JSON.stringify(res.body)).not.toMatch(/\bisbn\b|"author"|coverImageUrl/i);
+      expect(JSON.stringify(res.body)).not.toMatch(/\bisbn\b|"author"|coverImageUrl|leather|colorFamily/i);
     });
   });
 
@@ -182,30 +179,20 @@ describe('Welt & Grain API (integration)', () => {
       const list = await ctx.request.get('/api/v1/products').expect(200);
       expect(list.body.data.length).toBeGreaterThan(0);
 
-      const first = list.body.data[0] as { name: string; slug: string; style: string };
-      const search = await ctx.request.get(`/api/v1/products?q=${encodeURIComponent(first.name)}`).expect(200);
-      expect(search.body.data.some((b: { name: string }) => b.name === first.name)).toBe(true);
+      const first = list.body.data[0] as { title: string; slug: string };
+      const search = await ctx.request.get(`/api/v1/products?q=${encodeURIComponent(first.title)}`).expect(200);
+      expect(search.body.data.some((p: { slug: string }) => p.slug === first.slug)).toBe(true);
 
       const bySlug = await ctx.request.get(`/api/v1/products/slug/${first.slug}`).expect(200);
       expect(bySlug.body.data.slug).toBe(first.slug);
-      const colors = await ctx.request.get(`/api/v1/products/slug/${first.slug}/colors`).expect(200);
-      expect(colors.body.data.every((b: { style: string }) => b.style === first.style)).toBe(true);
 
-      const facets = await ctx.request.get('/api/v1/products/facets?category=boots').expect(200);
-      expect(facets.body.data.sizes.length).toBeGreaterThan(0);
+      const facets = await ctx.request.get('/api/v1/products/facets?category=drills').expect(200);
+      expect(facets.body.data.specs.length).toBeGreaterThan(0);
       expect(facets.body.data.price.max).toBeGreaterThan(0);
-
-      const size = facets.body.data.sizes[0].value as string;
-      const bySize = await ctx.request.get(`/api/v1/products?category=boots&size=${size}`).expect(200);
-      expect(
-        bySize.body.data.every((b: { variants: { size: string; stock: number }[] }) =>
-          b.variants.some((v) => v.size === size && v.stock > 0),
-        ),
-      ).toBe(true);
 
       const featured = await ctx.request.get('/api/v1/products/featured').expect(200);
       expect(featured.body.data.length).toBeGreaterThan(0);
-      expect(featured.body.data.every((b: { featured: boolean }) => b.featured === true)).toBe(true);
+      expect(featured.body.data.every((p: { featured: boolean }) => p.featured === true)).toBe(true);
     });
 
     it('admin can create and update a product', async () => {
@@ -220,7 +207,7 @@ describe('Welt & Grain API (integration)', () => {
       const updated = await ctx.request
         .patch(`/api/v1/products/${id}`)
         .set(authHeader(ctx.adminToken))
-        .send({ price: 2150, variants: [{ sku: 'TEST-10', size: '10', stock: 8 }] })
+        .send({ price: 2150, variants: [{ sku: created.body.data.variants[0].sku, label: 'Standard', stock: { BER: 8 } }] })
         .expect(200);
 
       expect(updated.body.data.price).toBe(2150);
@@ -283,6 +270,7 @@ describe('Welt & Grain API (integration)', () => {
         .expect(201);
 
       const scarceId = created.body.data.id as string;
+      const scarceSku = created.body.data.variants[0].sku as string;
       const c1 = await registerCustomer(ctx.request, `oos1_${Date.now()}`);
       const c2 = await registerCustomer(ctx.request, `oos2_${Date.now()}`);
 
@@ -290,7 +278,7 @@ describe('Welt & Grain API (integration)', () => {
         await ctx.request
           .post('/api/v1/cart/items')
           .set(authHeader(c.accessToken))
-          .send({ productId: scarceId, sku: 'TEST-10', quantity: 1 })
+          .send({ productId: scarceId, sku: scarceSku, quantity: 1 })
           .expect(201);
 
         await ctx.request

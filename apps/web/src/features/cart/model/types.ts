@@ -5,8 +5,7 @@ export interface CartLine {
   slug: string;
   title: string;
   image?: string;
-  size: string;
-  width?: string;
+  label: string;
   price: number;
   available: number;
 }

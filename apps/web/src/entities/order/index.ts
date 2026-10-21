@@ -10,12 +10,13 @@ export type OrderStatus =
 export interface OrderItem {
   product: string;
   sku: string;
-  size: string;
-  width?: string;
+  label: string;
   title: string;
   image?: string;
   price: number;
   quantity: number;
+  /** Which warehouses the units were taken from; known once the order is paid. */
+  allocations?: { warehouse: string; quantity: number }[];
 }
 
 export interface Order {
