@@ -1,0 +1,1018 @@
+[
+  {
+    "slug": "mens-sample-boots-1",
+    "title": "Sample Boots 1 | Black",
+    "name": "Sample Boots 1",
+    "style": "mens-sample-boots-1",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 20500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOM1-7",
+        "size": "7",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM1-8",
+        "size": "8",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM1-9",
+        "size": "9",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM1-10",
+        "size": "10",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM1-11",
+        "size": "11",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM1-12",
+        "size": "12",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM1-13",
+        "size": "13",
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-boots-2",
+    "title": "Sample Boots 2 | Black",
+    "name": "Sample Boots 2",
+    "style": "mens-sample-boots-2",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 21000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOM2-7",
+        "size": "7",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM2-8",
+        "size": "8",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM2-9",
+        "size": "9",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM2-10",
+        "size": "10",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM2-11",
+        "size": "11",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM2-12",
+        "size": "12",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM2-13",
+        "size": "13",
+        "stock": 5
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-boots-3",
+    "title": "Sample Boots 3 | Black",
+    "name": "Sample Boots 3",
+    "style": "mens-sample-boots-3",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 21500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOM3-7",
+        "size": "7",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM3-8",
+        "size": "8",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM3-9",
+        "size": "9",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM3-10",
+        "size": "10",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM3-11",
+        "size": "11",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM3-12",
+        "size": "12",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM3-13",
+        "size": "13",
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-boots-4",
+    "title": "Sample Boots 4 | Black",
+    "name": "Sample Boots 4",
+    "style": "mens-sample-boots-4",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 22000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOM4-7",
+        "size": "7",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM4-8",
+        "size": "8",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM4-9",
+        "size": "9",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM4-10",
+        "size": "10",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM4-11",
+        "size": "11",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM4-12",
+        "size": "12",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM4-13",
+        "size": "13",
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-boots-5",
+    "title": "Sample Boots 5 | Black",
+    "name": "Sample Boots 5",
+    "style": "mens-sample-boots-5",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 22500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOM5-7",
+        "size": "7",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM5-8",
+        "size": "8",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM5-9",
+        "size": "9",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM5-10",
+        "size": "10",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM5-11",
+        "size": "11",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM5-12",
+        "size": "12",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM5-13",
+        "size": "13",
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-boots-6",
+    "title": "Sample Boots 6 | Black",
+    "name": "Sample Boots 6",
+    "style": "mens-sample-boots-6",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 23000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOM6-7",
+        "size": "7",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM6-8",
+        "size": "8",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM6-9",
+        "size": "9",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM6-10",
+        "size": "10",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM6-11",
+        "size": "11",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM6-12",
+        "size": "12",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM6-13",
+        "size": "13",
+        "stock": 5
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-boots-7",
+    "title": "Sample Boots 7 | Black",
+    "name": "Sample Boots 7",
+    "style": "mens-sample-boots-7",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 23500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOM7-7",
+        "size": "7",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM7-8",
+        "size": "8",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM7-9",
+        "size": "9",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM7-10",
+        "size": "10",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM7-11",
+        "size": "11",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM7-12",
+        "size": "12",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM7-13",
+        "size": "13",
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-boots-8",
+    "title": "Sample Boots 8 | Black",
+    "name": "Sample Boots 8",
+    "style": "mens-sample-boots-8",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 24000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOM8-7",
+        "size": "7",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM8-8",
+        "size": "8",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM8-9",
+        "size": "9",
+        "stock": 7
+      },
+      {
+        "sku": "SBOM8-10",
+        "size": "10",
+        "stock": 8
+      },
+      {
+        "sku": "SBOM8-11",
+        "size": "11",
+        "stock": 5
+      },
+      {
+        "sku": "SBOM8-12",
+        "size": "12",
+        "stock": 6
+      },
+      {
+        "sku": "SBOM8-13",
+        "size": "13",
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "slug": "womens-sample-boots-1",
+    "title": "Sample Boots 1 | Black",
+    "name": "Sample Boots 1",
+    "style": "womens-sample-boots-1",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "women",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 21500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOW1-6",
+        "size": "6",
+        "stock": 6
+      },
+      {
+        "sku": "SBOW1-7",
+        "size": "7",
+        "stock": 7
+      },
+      {
+        "sku": "SBOW1-8",
+        "size": "8",
+        "stock": 8
+      },
+      {
+        "sku": "SBOW1-9",
+        "size": "9",
+        "stock": 5
+      }
+    ]
+  },
+  {
+    "slug": "womens-sample-boots-2",
+    "title": "Sample Boots 2 | Black",
+    "name": "Sample Boots 2",
+    "style": "womens-sample-boots-2",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "women",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 22000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOW2-6",
+        "size": "6",
+        "stock": 7
+      },
+      {
+        "sku": "SBOW2-7",
+        "size": "7",
+        "stock": 8
+      },
+      {
+        "sku": "SBOW2-8",
+        "size": "8",
+        "stock": 5
+      },
+      {
+        "sku": "SBOW2-9",
+        "size": "9",
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "slug": "womens-sample-boots-3",
+    "title": "Sample Boots 3 | Black",
+    "name": "Sample Boots 3",
+    "style": "womens-sample-boots-3",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "women",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 22500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOW3-6",
+        "size": "6",
+        "stock": 8
+      },
+      {
+        "sku": "SBOW3-7",
+        "size": "7",
+        "stock": 5
+      },
+      {
+        "sku": "SBOW3-8",
+        "size": "8",
+        "stock": 6
+      },
+      {
+        "sku": "SBOW3-9",
+        "size": "9",
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "slug": "womens-sample-boots-4",
+    "title": "Sample Boots 4 | Black",
+    "name": "Sample Boots 4",
+    "style": "womens-sample-boots-4",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "boots",
+    "gender": "women",
+    "description": "Placeholder product for tests and development (boots).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 23000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBOW4-6",
+        "size": "6",
+        "stock": 5
+      },
+      {
+        "sku": "SBOW4-7",
+        "size": "7",
+        "stock": 6
+      },
+      {
+        "sku": "SBOW4-8",
+        "size": "8",
+        "stock": 7
+      },
+      {
+        "sku": "SBOW4-9",
+        "size": "9",
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-shoes-1",
+    "title": "Sample Shoes 1 | Black",
+    "name": "Sample Shoes 1",
+    "style": "mens-sample-shoes-1",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "shoes",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (shoes).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 17500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SSHM1-7",
+        "size": "7",
+        "stock": 6
+      },
+      {
+        "sku": "SSHM1-8",
+        "size": "8",
+        "stock": 7
+      },
+      {
+        "sku": "SSHM1-9",
+        "size": "9",
+        "stock": 8
+      },
+      {
+        "sku": "SSHM1-10",
+        "size": "10",
+        "stock": 5
+      },
+      {
+        "sku": "SSHM1-11",
+        "size": "11",
+        "stock": 6
+      },
+      {
+        "sku": "SSHM1-12",
+        "size": "12",
+        "stock": 7
+      },
+      {
+        "sku": "SSHM1-13",
+        "size": "13",
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-shoes-2",
+    "title": "Sample Shoes 2 | Black",
+    "name": "Sample Shoes 2",
+    "style": "mens-sample-shoes-2",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "shoes",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (shoes).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 18000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SSHM2-7",
+        "size": "7",
+        "stock": 7
+      },
+      {
+        "sku": "SSHM2-8",
+        "size": "8",
+        "stock": 8
+      },
+      {
+        "sku": "SSHM2-9",
+        "size": "9",
+        "stock": 5
+      },
+      {
+        "sku": "SSHM2-10",
+        "size": "10",
+        "stock": 6
+      },
+      {
+        "sku": "SSHM2-11",
+        "size": "11",
+        "stock": 7
+      },
+      {
+        "sku": "SSHM2-12",
+        "size": "12",
+        "stock": 8
+      },
+      {
+        "sku": "SSHM2-13",
+        "size": "13",
+        "stock": 5
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-shoes-3",
+    "title": "Sample Shoes 3 | Black",
+    "name": "Sample Shoes 3",
+    "style": "mens-sample-shoes-3",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "shoes",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (shoes).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 18500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SSHM3-7",
+        "size": "7",
+        "stock": 8
+      },
+      {
+        "sku": "SSHM3-8",
+        "size": "8",
+        "stock": 5
+      },
+      {
+        "sku": "SSHM3-9",
+        "size": "9",
+        "stock": 6
+      },
+      {
+        "sku": "SSHM3-10",
+        "size": "10",
+        "stock": 7
+      },
+      {
+        "sku": "SSHM3-11",
+        "size": "11",
+        "stock": 8
+      },
+      {
+        "sku": "SSHM3-12",
+        "size": "12",
+        "stock": 5
+      },
+      {
+        "sku": "SSHM3-13",
+        "size": "13",
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-shoes-4",
+    "title": "Sample Shoes 4 | Black",
+    "name": "Sample Shoes 4",
+    "style": "mens-sample-shoes-4",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "shoes",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (shoes).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 19000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SSHM4-7",
+        "size": "7",
+        "stock": 5
+      },
+      {
+        "sku": "SSHM4-8",
+        "size": "8",
+        "stock": 6
+      },
+      {
+        "sku": "SSHM4-9",
+        "size": "9",
+        "stock": 7
+      },
+      {
+        "sku": "SSHM4-10",
+        "size": "10",
+        "stock": 8
+      },
+      {
+        "sku": "SSHM4-11",
+        "size": "11",
+        "stock": 5
+      },
+      {
+        "sku": "SSHM4-12",
+        "size": "12",
+        "stock": 6
+      },
+      {
+        "sku": "SSHM4-13",
+        "size": "13",
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-bags-1",
+    "title": "Sample Bags 1 | Black",
+    "name": "Sample Bags 1",
+    "style": "mens-sample-bags-1",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "bags",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (bags).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 25500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBAM1-One Size",
+        "size": "One Size",
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-bags-2",
+    "title": "Sample Bags 2 | Black",
+    "name": "Sample Bags 2",
+    "style": "mens-sample-bags-2",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "bags",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (bags).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 26000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBAM2-One Size",
+        "size": "One Size",
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-belts-1",
+    "title": "Sample Belts 1 | Black",
+    "name": "Sample Belts 1",
+    "style": "mens-sample-belts-1",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "belts",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (belts).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 6500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBEM1-32",
+        "size": "32",
+        "stock": 6
+      },
+      {
+        "sku": "SBEM1-34",
+        "size": "34",
+        "stock": 7
+      },
+      {
+        "sku": "SBEM1-36",
+        "size": "36",
+        "stock": 8
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-belts-2",
+    "title": "Sample Belts 2 | Black",
+    "name": "Sample Belts 2",
+    "style": "mens-sample-belts-2",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "belts",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (belts).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 7000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SBEM2-32",
+        "size": "32",
+        "stock": 7
+      },
+      {
+        "sku": "SBEM2-34",
+        "size": "34",
+        "stock": 8
+      },
+      {
+        "sku": "SBEM2-36",
+        "size": "36",
+        "stock": 5
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-wallets-1",
+    "title": "Sample Wallets 1 | Black",
+    "name": "Sample Wallets 1",
+    "style": "mens-sample-wallets-1",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "wallets",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (wallets).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 5500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SWAM1-One Size",
+        "size": "One Size",
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "slug": "mens-sample-wallets-2",
+    "title": "Sample Wallets 2 | Black",
+    "name": "Sample Wallets 2",
+    "style": "mens-sample-wallets-2",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "wallets",
+    "gender": "men",
+    "description": "Placeholder product for tests and development (wallets).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 6000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SWAM2-One Size",
+        "size": "One Size",
+        "stock": 7
+      }
+    ]
+  },
+  {
+    "slug": "unisex-sample-care-1",
+    "title": "Sample Care 1 | Black",
+    "name": "Sample Care 1",
+    "style": "unisex-sample-care-1",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "care",
+    "gender": "unisex",
+    "description": "Placeholder product for tests and development (care).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 2000,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SCAU1-One Size",
+        "size": "One Size",
+        "stock": 6
+      }
+    ]
+  },
+  {
+    "slug": "unisex-sample-care-2",
+    "title": "Sample Care 2 | Black",
+    "name": "Sample Care 2",
+    "style": "unisex-sample-care-2",
+    "color": "Black",
+    "colorFamily": "Black",
+    "colorGroup": "Sample Collection",
+    "category": "care",
+    "gender": "unisex",
+    "description": "Placeholder product for tests and development (care).",
+    "features": [
+      "Placeholder item"
+    ],
+    "price": 2500,
+    "images": [],
+    "variants": [
+      {
+        "sku": "SCAU2-One Size",
+        "size": "One Size",
+        "stock": 7
+      }
+    ]
+  }
+]
