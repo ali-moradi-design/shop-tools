@@ -44,7 +44,7 @@ test('browse → cart → fake payment → order shows its warehouse → order v
   await expect(shopper).toHaveURL(/paid=1/);
   await expect(shopper.getByTestId('order-status')).toHaveText(/paid/i);
   // the paid order remembers which warehouse the units came from
-  await expect(shopper.getByText(/Shipped from/)).toBeVisible();
+  await expect(shopper.locator('[data-testid=order-allocations]:visible')).toContainText(/Shipped from/);
   const orderNo = (await shopper.getByRole('heading', { level: 1 }).innerText()).replace(/^order\s*/i, '');
 
   // the admin sees the order
