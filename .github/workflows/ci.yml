@@ -88,7 +88,6 @@ jobs:
       NODE_ENV: development
       API_URL: http://localhost:4000
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      REVALIDATE_SECRET: ci-revalidate-secret
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -108,7 +107,6 @@ jobs:
       - name: Build and start the web app
         working-directory: apps/web
         run: |
-          # prerendering reads the catalog from the API
           NODE_ENV=production pnpm build
           NODE_ENV=production nohup pnpm start -p 3000 > web.log 2>&1 &
           npx --yes wait-on@8 -t 60000 http://localhost:3000

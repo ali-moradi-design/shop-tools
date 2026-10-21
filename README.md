@@ -2,8 +2,9 @@
 
 Work in progress: the tools shop (technical specs, spec filters, compare, stock
 per warehouse) for a portfolio. It starts from a plain copy of `leather-shop`
-(no history); the API now runs on MySQL; the storefront is still the copied one
-(Next.js with PPR) until the SSR step is merged.
+(no history); the API runs on MySQL and the storefront is rendered on the server per request;
+the UI is still the copied one
+(Next.js, server-side rendered).
 
 Scope and decisions: [docs/brief.md](docs/brief.md). Progress: [docs/build-log.md](docs/build-log.md).
 Security review inherited from the copy: [docs/security.md](docs/security.md).
@@ -34,7 +35,7 @@ Demo accounts:
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test   # all workspaces
-pnpm --filter @st/web build                # prerendering reads the API, so run the API first
+pnpm --filter @st/web build                # no API needed: pages are rendered per request
 pnpm --filter @st/web e2e                  # against the running API + web build
 ```
 
@@ -48,8 +49,8 @@ suite against a real MySQL; the `ci` job is the single required check.
   visitors, and keep the API port private.
 - Production refuses weak JWT secrets and a wildcard CORS origin, and the seed
   needs `ADMIN_PASSWORD`. See [deploy/](deploy) and [docs/security.md](docs/security.md).
-- Nightly reset: run `reset-demo:prod` from cron with `WEB_REVALIDATE_URL` and
-  `REVALIDATE_SECRET` set, so the storefront drops its cached catalog afterwards.
+- Nightly reset: run `reset-demo:prod` from cron; the storefront renders on every
+  request, so it shows the restored data at once.
 
 Product names, photos and prices come from the public thursdayboots.com catalog and
 are used only as sample content for this non-commercial demo.

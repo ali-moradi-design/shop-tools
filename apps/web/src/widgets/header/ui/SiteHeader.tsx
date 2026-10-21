@@ -6,7 +6,7 @@ import { Icon, Logo } from '@/shared/ui';
 const titleOf = (slug: string) => COLLECTIONS.find((c) => c.slug === slug)?.title ?? slug;
 
 /**
- * Static header (part of the PPR shell). `cart` and `account` are slots for the
+ * Header. `cart` and `account` are slots for the
  * dynamic, per-visitor parts.
  */
 export function SiteHeader({ cart, account }: { cart: ReactNode; account: ReactNode }) {

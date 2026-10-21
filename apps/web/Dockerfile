@@ -1,8 +1,7 @@
-# Welt & Grain storefront. Build from the repository root. Prerendering reads the
-# catalog, so the API must be reachable while building:
-#   docker build -f apps/web/Dockerfile --network host \
-#     --build-arg API_URL=http://127.0.0.1:4000 --build-arg SITE_URL=https://shop.example.com \
-#     -t shop-tools-web .
+# Tools shop storefront. Build from the repository root:
+#   docker build -f apps/web/Dockerfile --build-arg SITE_URL=https://shop.example.com -t shop-tools-web .
+# Pages are rendered per request, so the API is not needed at build time; API_URL is
+# read at runtime (set it in the compose file).
 FROM node:22-bookworm-slim AS build
 WORKDIR /repo
 RUN corepack enable
@@ -10,9 +9,8 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile --filter @st/web
 COPY apps/web apps/web
-ARG API_URL=http://127.0.0.1:4000
 ARG SITE_URL=http://localhost:3000
-ENV API_URL=$API_URL NEXT_PUBLIC_SITE_URL=$SITE_URL NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_SITE_URL=$SITE_URL NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @st/web build
 
 FROM node:22-bookworm-slim

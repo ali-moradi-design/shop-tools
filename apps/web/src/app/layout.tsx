@@ -23,6 +23,12 @@ export const metadata: Metadata = {
   openGraph: { siteName: SITE.name, type: 'website' },
 };
 
+/**
+ * Server-side rendering for every page: prices and stock are always current, and each
+ * response can carry its own CSP nonce (see src/proxy.ts). A static page could not.
+ */
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable}`}>

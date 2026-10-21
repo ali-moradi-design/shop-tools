@@ -20,5 +20,5 @@ Nightly demo reset (crontab of the deploy user):
 30 3 * * * cd /srv/apps/shop-tools && docker compose exec -T api node dist/scripts/reset-demo.js
 ```
 
-Building the web image needs a reachable API (prerendering reads the catalog), see
-the comment at the top of `apps/web/Dockerfile`.
+The web image builds without the API (pages are rendered per request); `API_URL`
+is read at runtime.

@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { Product } from '@/entities/product/model/types';
 import { clientApi } from '@/shared/api/client';
-import { refreshCatalog } from '../api/actions';
 
 const toCents = (dollars: string) => Math.round(Number(dollars) * 100);
 
@@ -31,7 +30,6 @@ export function ProductEditor({ product }: { product: Product }) {
           variants,
         }),
       });
-      await refreshCatalog(product.slug);
       setMsg({ ok: true, text: 'Saved. The shop shows the change now.' });
       router.refresh();
     } catch (err) {

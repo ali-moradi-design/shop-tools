@@ -5,16 +5,12 @@ import { Suspense } from 'react';
 import { fetchFacets } from '@/entities/product';
 import { FilterBar, readFilters, toProductQuery } from '@/features/catalog-filters';
 import { ProductGrid, GridSkeleton } from '@/widgets/catalog';
-import { COLLECTIONS, findCollection, type Collection } from '@/shared/config';
+import { findCollection, type Collection } from '@/shared/config';
 
 type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-
-export function generateStaticParams() {
-  return COLLECTIONS.map((c) => ({ slug: c.slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = findCollection((await params).slug);
