@@ -45,3 +45,19 @@ What was done in each session, in order. Updated at the end of every step.
 - Photos: Wikimedia Commons (CC0, CC BY, CC BY-SA, public domain), credits in
   `docs/mockups/src/photos/CREDITS.md`.
 - No UI code until these are approved.
+
+## Step M2: demo photos from dewalt.ae, mockups on real photos
+
+- Decision (2026-10-21, by the owner): the shop uses product photos from
+  www.dewalt.ae as demo content. The code and the site are a non-commercial demo
+  and the payment gateway is simulated. The photos stay the property of their
+  owners; `apps/web/public/catalog/README.md` says so and explains how to remove them.
+- 500 photos (the main white-background photo of the first 500 product pages;
+  `robots.txt` allowed it; ~4 requests at a time with a delay), downscaled to
+  900 px WebP: `apps/web/public/catalog/<sku>.webp` (10.6 MB) with `manifest.json`
+  (product name, page URL, source image URL).
+- Mockups re-rendered on these photos; the Wikimedia photos and their credits were
+  removed. `docs/mockups/build.mjs` reads the photos from the catalog folder
+  (`OUT_DIR` can redirect the output).
+- Note for the seed (step 12): the generated products pick their photo from the
+  manifest by category; names, specs and prices stay generated.

@@ -11,6 +11,9 @@ build plan. The text below is kept as written there.
   `leather-shop` itself is not changed.
 - Database: MySQL instead of MongoDB.
 - Rendering: SSR instead of PPR.
+- Product photos: 500 photos from www.dewalt.ae, used only as demo content (decided
+  2026-10-21; this overrides "free images, no copied brand" in the Tools build plan).
+  See `apps/web/public/catalog/README.md`.
 
 ## Update 2026-10-21: final three shops
 
