@@ -5,7 +5,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const src = join(here, 'src');
+const OUT = process.env.OUT_DIR ?? here;
+const DW = process.env.PROFILE === 'dewalt';
+const src = join(OUT, 'src');
 mkdirSync(src, { recursive: true });
 
 const NAME = 'TOOLBENCH';
@@ -79,7 +81,9 @@ const P = {
   mm: 'photos/multimeter.jpg',
   box: 'photos/toolbox-3.jpg',
   sock: 'photos/socket-set.jpg',
+  hero: 'photos/toolbox-3.jpg',
 };
+if (DW) for (const k of Object.keys(P)) P[k] = `photos/${k}.webp`;
 
 const icon = {
   search: '⌕',
@@ -111,6 +115,12 @@ const products = [
   { n: 'Digital Multimeter CAT III 600 V', sku: 'MSR-DMM-600', img: P.mm, price: '$34.00', specs: [['Max voltage', '600 V'], ['Display', '4000 counts'], ['Category', 'CAT III'], ['Weight', '0.35 kg']], stock: ['ok', 'In stock — 2 warehouses'] },
 ];
 
+if (DW) {
+  Object.assign(products[3], { n: 'Mitre Saw 305 mm 1675 W', sku: 'SAW-305-16', specs: [['Power', '1675 W'], ['Blade', '305 mm'], ['Cut @90°', '115 mm'], ['Weight', '17.2 kg']] });
+  Object.assign(products[6], { n: 'Cross Line Laser 12 V Green', sku: 'MSR-LSR-12', specs: [['Range', '30 m'], ['Accuracy', '±3 mm @ 10 m'], ['Lines', '2'], ['Weight', '0.55 kg']] });
+  Object.assign(products[8], { n: 'Linesman Pliers 200 mm', sku: 'HND-PLR-200', img: P.pliers, price: '$18.90', specs: [['Length', '200 mm'], ['Cut capacity', '3.4 mm'], ['Material', 'Steel'], ['Weight', '0.58 kg']] });
+}
+
 function card(p, { compare = false, checked = false } = {}) {
   return `<div class="card"><div class="ph">${p.img ? `<img src="${p.img}">` : ''}${p.tag ? `<span class="tag y" style="position:absolute;left:12px;top:12px">${p.tag}</span>` : ''}</div>
 <div class="b"><div class="sku">${p.sku}</div><div class="nm">${p.n}</div>
@@ -129,12 +139,12 @@ const home = shell('Home', '', `
     <div class="row" style="gap:12px"><a class="btn">Shop power tools →</a><a class="btn ghost">Compare tools</a></div>
     <div class="mono" style="display:flex;gap:26px;font-size:12px;color:var(--steel);margin-top:6px"><span>▪ 320 products</span><span>▪ 8 categories</span><span>▪ 3 warehouses</span></div>
   </div>
-  <div class="ph" style="height:560px;border-left:2px solid var(--ink);background:#111"><img src="${P.box}" style="object-fit:cover;mix-blend-mode:normal"></div>
+  <div class="ph" style="height:560px;border-left:2px solid var(--ink);background:${DW ? '#fff' : '#111'}"><img src="${P.hero}" style="object-fit:${DW ? 'contain' : 'cover'};${DW ? '' : 'mix-blend-mode:normal'}"></div>
 </section>
 <section class="wrap" style="padding-top:40px">
   <div class="row" style="margin-bottom:16px"><h2 style="font-size:34px">Shop by category</h2><span class="sp"></span><a class="mono" style="font-size:12px">ALL CATEGORIES →</a></div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
-  ${[['Power tools', P.drill2, 96], ['Hand tools', P.pliers, 74], ['Measuring', P.caliper, 41], ['Fasteners', P.bolts, 63], ['Abrasives', P.grinder, 22], ['Electrical', P.mm, 18], ['Sockets & wrenches', P.sock, 38], ['Storage', P.box, 28]].map(([t, im, n]) => `<div class="card"><div class="ph" style="height:170px"><img src="${im}"></div><div class="row" style="padding:12px 16px"><h3 style="font-size:22px">${t}</h3><span class="sp"></span><span class="mono" style="font-size:12px;color:var(--mute)">${n}</span></div></div>`).join('')}
+  ${[['Power tools', P.drill2, 96], ['Hand tools', P.pliers, 74], ['Measuring', DW ? P.tape : P.caliper, 41], ['Drill bits', P.bolts, 63], ['Abrasives', P.grinder, 22], ['Batteries', P.mm, 18], ['Sockets & wrenches', P.sock, 38], ['Accessories', P.box, 28]].map(([t, im, n]) => `<div class="card"><div class="ph" style="height:170px"><img src="${im}"></div><div class="row" style="padding:12px 16px"><h3 style="font-size:22px">${t}</h3><span class="sp"></span><span class="mono" style="font-size:12px;color:var(--mute)">${n}</span></div></div>`).join('')}
   </div>
 </section>
 <section class="wrap" style="padding-top:44px">
@@ -173,7 +183,7 @@ ${checks('Motor', [['Brushless', 29, true], ['Brushed', 19, false]])}
 ${checks('Battery capacity', [['2.0 Ah', 14, false], ['4.0 Ah', 22, false], ['5.0 Ah', 12, false]])}
 </aside>
 <div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
-${[products[0], products[2], products[1], { ...products[0], n: 'Drill/Driver 18 V Compact Kit', sku: 'DRL-18C-52', price: '$99.00', specs: [['Voltage', '18 V'], ['Torque', '52 Nm'], ['Chuck', '13 mm'], ['Weight', '1.3 kg']] }, { ...products[1], n: 'Impact Driver 18 V Brushless', sku: 'IMP-18B-180', price: '$109.00', specs: [['Voltage', '18 V'], ['Torque', '180 Nm'], ['Hex', '1/4″'], ['Weight', '1.2 kg']] }, { ...products[2], n: 'Hammer Drill 18 V 2×4.0 Ah', sku: 'DRL-18H-70', price: '$159.00', specs: [['Voltage', '18 V'], ['Torque', '70 Nm'], ['Chuck', '13 mm'], ['Weight', '1.7 kg']] }].map((p, i) => card(p, { compare: true, checked: i < 3 })).join('')}
+${[products[0], { ...products[2], img: P.sd }, products[1], { ...products[0], img: P.drill2, n: 'Drill/Driver 18 V Compact Kit', sku: 'DRL-18C-52', price: '$99.00', specs: [['Voltage', '18 V'], ['Torque', '52 Nm'], ['Chuck', '13 mm'], ['Weight', '1.3 kg']] }, { ...products[1], img: P.sd, n: 'Impact Driver 18 V Brushless', sku: 'IMP-18B-180', price: '$109.00', specs: [['Voltage', '18 V'], ['Torque', '180 Nm'], ['Hex', '1/4″'], ['Weight', '1.2 kg']] }, { ...products[2], n: 'Hammer Drill 18 V 2×4.0 Ah', sku: 'DRL-18H-70', price: '$159.00', specs: [['Voltage', '18 V'], ['Torque', '70 Nm'], ['Chuck', '13 mm'], ['Weight', '1.7 kg']] }].map((p, i) => card(p, { compare: true, checked: i < 3 })).join('')}
 </div>
 <div class="row mono" style="justify-content:center;gap:6px;margin-top:26px">${['‹', '1', '2', '3', '4', '5', '›'].map((x, i) => `<span style="border:1px solid var(--ink);width:36px;height:36px;display:grid;place-items:center;background:${i === 1 ? 'var(--ink)' : '#fff'};color:${i === 1 ? '#fff' : 'var(--ink)'}">${x}</span>`).join('')}</div>
 </div></div></div>
@@ -279,7 +289,7 @@ for (const name of Object.keys(pages)) {
   const page = await browser.newPage({ viewport: { width: 1440, height: name === 'listing' ? 1300 : 900 } });
   await page.goto(`file://${join(src, `${name}.html`)}`, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: join(here, `${name}.jpg`), type: 'jpeg', quality: 86, fullPage: name !== 'listing' });
+  await page.screenshot({ path: join(OUT, `${name}.jpg`), type: 'jpeg', quality: 86, fullPage: name !== 'listing' });
   await page.close();
   console.log('rendered', name);
 }
