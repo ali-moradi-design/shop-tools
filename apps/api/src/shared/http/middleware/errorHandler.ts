@@ -54,6 +54,17 @@ export function errorHandler(
     }
   }
 
+  // errors raised by Express itself (invalid JSON, body too large, bad encoding) carry a 4xx status
+  const clientStatus = (appErr as { status?: unknown; expose?: unknown } | null)?.status;
+  if (typeof clientStatus === 'number' && clientStatus >= 400 && clientStatus < 500) {
+    const type = (appErr as { type?: string }).type;
+    res.status(clientStatus).json({
+      message: type === 'entity.too.large' ? 'Request body too large' : 'Malformed request',
+      ...(requestId ? { requestId } : {}),
+    });
+    return;
+  }
+
   logger.error('unhandled_error', {
     requestId,
     err: appErr instanceof Error ? appErr.message : String(appErr),

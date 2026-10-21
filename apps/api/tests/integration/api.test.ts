@@ -28,7 +28,7 @@ function inStockSku(product: { variants: { sku: string; stock: number }[] }, qty
   return variant.sku;
 }
 
-describe('Welt & Grain API (integration)', () => {
+describe('Toolbench API (integration)', () => {
   let ctx: TestContext;
 
   beforeAll(async () => {

@@ -7,7 +7,7 @@ import { cartRepo } from './modules/ordering';
 const GUEST_CART_TTL_MS = 30 * 24 * 3600 * 1000;
 const DAY_MS = 24 * 3600 * 1000;
 
-/** Guest carts nobody touched for 30 days are removed (the MongoDB version used a TTL index). */
+/** Guest carts nobody touched for 30 days are removed. */
 async function purgeGuestCarts(): Promise<void> {
   try {
     const removed = await cartRepo.purgeStaleGuestCarts(new Date(Date.now() - GUEST_CART_TTL_MS));

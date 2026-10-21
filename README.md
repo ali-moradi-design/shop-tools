@@ -1,13 +1,12 @@
 # shop-tools
 
-Work in progress: the tools shop (technical specs, spec filters, compare, stock
-per warehouse) for a portfolio. It starts from a plain copy of `leather-shop`
-(no history); the API runs on MySQL and the storefront is rendered on the server per request;
-the UI is still the copied one
-(Next.js, server-side rendered).
+A demo tool shop for a portfolio. Every category has its own technical specifications:
+filter by ranges in the unit you prefer (Nm or in·lb, mm or inches), compare up to four
+products side by side, and see the stock of each warehouse. Express 5 API on MySQL (Prisma),
+Next.js storefront rendered on the server per request.
 
 Scope and decisions: [docs/brief.md](docs/brief.md). Progress: [docs/build-log.md](docs/build-log.md).
-Security review inherited from the copy: [docs/security.md](docs/security.md).
+Security review: [docs/security.md](docs/security.md).
 
 ## Run locally
 
@@ -19,7 +18,7 @@ docker compose up -d                      # MySQL on 127.0.0.1:3306
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
 pnpm --filter @st/api migrate             # create the tables
-pnpm --filter @st/api seed                # demo products, accounts, reviews
+pnpm --filter @st/api seed                # 500 tools, specs, warehouses, accounts, reviews
 pnpm dev:api                              # http://localhost:4000 (docs: /api/docs)
 pnpm dev:web                              # http://localhost:3000
 ```
@@ -52,5 +51,7 @@ suite against a real MySQL; the `ci` job is the single required check.
 - Nightly reset: run `reset-demo:prod` from cron; the storefront renders on every
   request, so it shows the restored data at once.
 
-Product names, photos and prices come from the public thursdayboots.com catalog and
-are used only as sample content for this non-commercial demo.
+Product names and photos come from the public dewalt.ae catalogue and belong to their
+owners; they are used only as sample content for this non-commercial demo (prices, stock and
+specifications are generated and the payment gateway is simulated). The seed lives in
+`apps/api/src/scripts/seed/catalog/`.
