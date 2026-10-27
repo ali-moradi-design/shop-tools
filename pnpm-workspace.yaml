@@ -1,7 +1,9 @@
 packages:
   - apps/*
-onlyBuiltDependencies:
-  - esbuild
-  - prisma
-  - '@prisma/client'
-  - '@prisma/engines'
+allowBuilds:
+  esbuild: true
+  prisma: true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  unrs-resolver: false

@@ -1,8 +1,8 @@
 # Tools shop API. Build from the repository root:
 #   docker build -f apps/api/Dockerfile -t shop-tools-api .
-FROM node:22-bookworm-slim AS build
+FROM node:24-bookworm-slim AS build
 WORKDIR /repo
-RUN corepack enable
+RUN npm install -g pnpm@12.15.0
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/api/package.json apps/api/
 # the Prisma client is generated at install time
@@ -13,7 +13,7 @@ RUN pnpm --filter @st/api build \
  && pnpm --filter @st/api deploy --prod --legacy /out \
  && cp -r apps/api/dist /out/dist
 
-FROM node:22-bookworm-slim
+FROM node:24-bookworm-slim
 ENV NODE_ENV=production
 WORKDIR /app
 # Prisma's engines need OpenSSL

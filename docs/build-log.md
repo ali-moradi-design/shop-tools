@@ -178,3 +178,12 @@ What was done in each session, in order. Updated at the end of every step.
 - Contrast: muted text darkened (`#565e66`) to pass WCAG AA on the grey background.
 - The CSP E2E checks the HTML the server sent (every `<script>` carries the nonce) instead of
   the live DOM, because scripts injected later by the loader get their nonce as a property.
+
+## Tooling: pnpm 12 and Node 24
+
+- pnpm 10.28.0 → 12.15.0. `onlyBuiltDependencies` became `allowBuilds` (pnpm 11+ fails the
+  install on an unapproved build script); `@scarf/scarf` and `unrs-resolver`, which were already
+  skipped, are now denied explicitly.
+- Dockerfiles install pnpm with `npm install -g` because the corepack bundled with Node cannot
+  run pnpm 12. CI uses `pnpm/action-setup@v6`.
+- Node 22 → 24 (current LTS) in CI, Dockerfiles and `engines`; `@types/node` aligned to 24.

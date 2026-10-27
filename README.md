@@ -10,7 +10,7 @@ Security review: [docs/security.md](docs/security.md).
 
 ## Run locally
 
-Needs Node 22, pnpm 10 and Docker.
+Needs Node 24, pnpm 12 and Docker.
 
 ```bash
 pnpm install
