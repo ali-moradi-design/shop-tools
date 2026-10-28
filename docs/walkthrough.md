@@ -52,7 +52,7 @@ MySQL), `apps/web` (Next.js 16, React 19, FSD folders), `deploy/` (Nginx + compo
 
 ## Things to try while learning
 
-- `docker compose up -d`, migrate, seed, then open `/api/docs` and call `GET /products?category=drills&spec.torque=400..900in·lb`.
+- `pnpm db:up`, `pnpm migrate`, `pnpm seed`, `pnpm dev:api`, then open `/api/docs` and call `GET /products?category=drills&spec.torque=400..900in·lb`.
 - Run `pnpm --filter @st/api test` and read one failing-on-purpose change: break the factor of `in·lb` in `units.ts`.
 - Change a price in the admin and reload the product page (SSR: no cache to clear).
 - Pay for the last unit from two browsers at once (the race test does this by code).

@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process';
 import { PrismaClient } from '@prisma/client';
 
 export const TEST_DATABASE_URL =
-  process.env.TEST_DATABASE_URL ?? 'mysql://root:root@127.0.0.1:3306/toolbench_test';
+  process.env.TEST_DATABASE_URL ?? 'mysql://root:root@127.0.0.1:33100/toolbench_test';
 
 /**
  * Builds a clean MySQL database for the whole test run: drop, create, apply the

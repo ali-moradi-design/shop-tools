@@ -4,6 +4,11 @@
   "packageManager": "pnpm@12.15.0",
   "engines": { "node": ">=24" },
   "scripts": {
+    "db:up": "docker compose up -d --wait mysql",
+    "db:down": "docker compose stop mysql",
+    "migrate": "pnpm --filter @st/api migrate",
+    "seed": "pnpm --filter @st/api seed",
+    "dev": "pnpm --parallel --filter @st/api --filter @st/web dev",
     "dev:api": "pnpm --filter @st/api dev",
     "dev:web": "pnpm --filter @st/web dev",
     "build": "pnpm -r build",

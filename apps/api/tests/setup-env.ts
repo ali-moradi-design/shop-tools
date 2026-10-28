@@ -5,7 +5,7 @@
 process.env.NODE_ENV = 'test';
 process.env.PORT = '4000';
 process.env.DATABASE_URL =
-  process.env.TEST_DATABASE_URL ?? 'mysql://root:root@127.0.0.1:3306/toolbench_test';
+  process.env.TEST_DATABASE_URL ?? 'mysql://root:root@127.0.0.1:33100/toolbench_test';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret-key-min8';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key-min8';
 process.env.ACCESS_TOKEN_TTL = '15m';
