@@ -187,3 +187,16 @@ What was done in each session, in order. Updated at the end of every step.
 - Dockerfiles install pnpm with `npm install -g` because the corepack bundled with Node cannot
   run pnpm 12. CI uses `pnpm/action-setup@v6`.
 - Node 22 → 24 (current LTS) in CI, Dockerfiles and `engines`; `@types/node` aligned to 24.
+
+## Local Docker and root scripts
+
+- The root `compose.yaml` was not valid YAML (leftover MongoDB lines from the leather-shop
+  copy). It now holds MySQL on `127.0.0.1:33100` (so it never clashes with a MySQL on 3306)
+  and, like leather-shop, the whole stack: MySQL → `seed` (migrations + demo data) → API → web.
+  `docker compose up -d --build` runs everything; `pnpm db:up` / `pnpm db:down` only MySQL.
+- Root scripts: `db:up`, `db:down`, `migrate`, `seed`, and `dev`, which starts API and web
+  together. `.env.example` and the API test defaults point at port 33100.
+- API image fix: `pnpm deploy` reinstalls the packages without the generated Prisma client, so
+  the container failed on start ("@prisma/client did not initialize yet"). The runtime stage
+  now runs `prisma generate` (after OpenSSL is installed, so the engine matches).
+- README: features, both ways to run locally, a scripts table.

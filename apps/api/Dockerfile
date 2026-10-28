@@ -20,7 +20,10 @@ WORKDIR /app
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=build --chown=node:node /out ./
-RUN mkdir -p uploads/products && chown -R node:node uploads
+# `pnpm deploy` reinstalls the packages without the generated Prisma client; generate it here,
+# where OpenSSL is present, so the engine matches the runtime
+RUN node_modules/.bin/prisma generate \
+ && mkdir -p uploads/products && chown -R node:node uploads
 # never run as root
 USER node
 EXPOSE 4000

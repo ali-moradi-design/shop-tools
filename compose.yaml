@@ -1,4 +1,17 @@
-# Local development database. Production compose lives in deploy/.
+# Local stack: `docker compose up -d --build` runs MySQL, the API and the storefront
+# (http://localhost:3000). For `pnpm dev`, start only the database: `pnpm db:up`.
+# Production compose lives in deploy/.
+name: shop-tools
+
+x-api-env: &api-env
+  NODE_ENV: development # plain-http cookies and the default demo admin password
+  PORT: 4000
+  DATABASE_URL: mysql://root:root@mysql:3306/toolbench
+  JWT_ACCESS_SECRET: local-access-secret
+  JWT_REFRESH_SECRET: local-refresh-secret
+  CORS_ORIGIN: http://localhost:3000
+  TRUST_PROXY: 1 # the storefront's /api route
+
 services:
   mysql:
     image: mysql:8.4 # pinned minor line; bump deliberately
@@ -12,7 +25,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: toolbench
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:33100:3306" # 33100 so it never clashes with a MySQL already on 3306
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -22,28 +35,41 @@ services:
       retries: 20
     mem_limit: 512m
 
-volumes:
-      - mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    mem_limit: 512m
+  # applies the migrations and loads the demo catalog and accounts on every start
+  # (upserts, so it is safe to repeat)
+  seed:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    image: shop-tools-api:local
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/scripts/seed.js"]
+    environment: *api-env
+    depends_on:
+      mysql: { condition: service_healthy }
 
-  mongo:
-    image: mongo:8.2.6 # pinned: 8.3 refuses to start on Linux 6.19+ (SERVER-121912)
-    command: ["--wiredTigerCacheSizeGB", "0.25"]
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    image: shop-tools-api:local
+    environment: *api-env
     ports:
-      - "127.0.0.1:27017:27017"
+      - "127.0.0.1:4000:4000"
     volumes:
-      - mongo-data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    mem_limit: 512m
+      - uploads:/app/uploads
+    depends_on:
+      seed: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  # pages are rendered per request, so the production image works as is
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    image: shop-tools-web:local
+    environment:
+      API_URL: http://api:4000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
 
 volumes:
   mysql-data:
+  uploads:
