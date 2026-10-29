@@ -200,3 +200,22 @@ What was done in each session, in order. Updated at the end of every step.
   the container failed on start ("@prisma/client did not initialize yet"). The runtime stage
   now runs `prisma generate` (after OpenSSL is installed, so the engine matches).
 - README: features, both ways to run locally, a scripts table.
+
+## Production deploy files
+
+- `.github/workflows/docker.yml`: after CI passes on `main`, builds and pushes
+  `shop-tools-api:<sha>` and `shop-tools-web:<sha>` to ghcr.io, then deploys through deploy-kit
+  v1.0.0 (`deploy-app.yml`, `secrets: inherit`, smoke `/ /robots.txt /api/health`).
+- `deploy/compose.yaml`: `IMAGE_TAG` (set by the server's `deploy-app`) instead of `TAG`; each
+  service gets only the variables it needs (no `env_file`), and missing secrets stop
+  `docker compose` with a clear message. Migrations run with `node_modules/.bin/prisma` (npx
+  may write a cache on the read-only disk), `CHECKPOINT_DISABLE=1`. The MySQL healthcheck reads
+  the password inside the container. Web: read-only with tmpfs for `/tmp` and
+  `.next/cache` (next/image writes its optimized images there), waits for a healthy API.
+- Web image: `HEALTHCHECK` on `/robots.txt`; `compress: false` (Nginx gzips).
+- `deploy/nginx.conf`: IPv6 listen, `server_tokens off`, dotfiles denied, upgrade headers.
+- CI: actions pinned to full SHAs, `persist-credentials: false`; `.github/dependabot.yml`
+  keeps the pins current.
+- Tested locally with the production compose file: all three containers healthy, migrations,
+  seed and reset from `dist`, `/`, `/admin`, `/search`, `/api/health` and next/image answer 200.
+  Memory: web 71 MiB, api 40 MiB, MySQL 224 MiB.

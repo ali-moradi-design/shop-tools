@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
   // small self-contained server for the Docker image
   output: 'standalone',
   poweredByHeader: false,
+  // Nginx on the server compresses the responses
+  compress: false,
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
