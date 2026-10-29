@@ -219,3 +219,7 @@ What was done in each session, in order. Updated at the end of every step.
 - Tested locally with the production compose file: all three containers healthy, migrations,
   seed and reset from `dist`, `/`, `/admin`, `/search`, `/api/health` and next/image answer 200.
   Memory: web 71 MiB, api 40 MiB, MySQL 224 MiB.
+- Fonts are local: `next/font/google` downloaded the fonts during `next build`, and one CI run
+  failed when that download broke. The nine Latin woff2 files (Barlow Condensed 500-700,
+  IBM Plex Sans and Mono 400-600, from Fontsource 5, SIL OFL with the license files) now live in
+  `apps/web/src/app/fonts` and load through `next/font/local`. The build works without network.
