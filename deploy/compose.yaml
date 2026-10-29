@@ -1,5 +1,7 @@
-# Production stack for /srv/apps/shop-tools/compose.yaml (roadmap phase 8).
-# Images are built in CI and pulled here; secrets live in .env next to this file.
+# /srv/apps/shop-tools/compose.yaml: web + api + their own MySQL.
+# Images are built in CI (.github/workflows/docker.yml) and only pulled here.
+# .env next to this file holds IMAGE_TAG (the commit SHA to run) and the secrets
+# (names in .env.example). deploy-app changes only the IMAGE_TAG line.
 name: shop-tools
 
 services:
@@ -12,37 +14,47 @@ services:
       - --performance-schema=OFF
       - --skip-name-resolve
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is not set}
       MYSQL_DATABASE: toolbench
       MYSQL_USER: toolbench
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is not set}
     volumes:
       - mysql-data:/var/lib/mysql
     networks: [backend]
-    # no published ports: only the API reaches the database
+    # no published ports: only the api reaches the database
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
-      interval: 15s
+      # $$ = read inside the container, so the password is not written into the container config
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 60s
     mem_limit: 512m
     restart: unless-stopped
 
   api:
-    image: ghcr.io/ali-moradi-design/shop-tools-api:${TAG:-latest}
-    env_file: .env
+    image: ghcr.io/ali-moradi-design/shop-tools-api:${IMAGE_TAG:?IMAGE_TAG is not set}
     environment:
       NODE_ENV: production
       PORT: 4000
       DATABASE_URL: mysql://toolbench:${MYSQL_PASSWORD}@mysql:3306/toolbench
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is not set}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is not set}
       CORS_ORIGIN: https://shop-tools.ali-moradi-develop.com
+      COOKIE_SECURE: "true"
       # one proxy hop in front of the API: the storefront's /api route
       TRUST_PROXY: 1
+      # read by the seed and the nightly reset (dist/scripts/*.js)
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@shop-tools.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is not set}
+      # Prisma must not phone home or write caches on a read-only disk
+      CHECKPOINT_DISABLE: "1"
     volumes:
       - uploads:/app/uploads
     networks: [backend, frontend]
-    # apply the migrations, then start (the image carries the Prisma CLI and schema)
-    command: ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+    # apply the migrations, then start (the image carries the Prisma CLI and schema);
+    # the image's HEALTHCHECK calls /api/health
+    command: ["sh", "-c", "node_modules/.bin/prisma migrate deploy && exec node dist/server.js"]
     depends_on:
       mysql:
         condition: service_healthy
@@ -53,22 +65,29 @@ services:
     restart: unless-stopped
 
   web:
-    image: ghcr.io/ali-moradi-design/shop-tools-web:${TAG:-latest}
+    image: ghcr.io/ali-moradi-design/shop-tools-web:${IMAGE_TAG:?IMAGE_TAG is not set}
     environment:
       API_URL: http://api:4000
       NEXT_PUBLIC_SITE_URL: https://shop-tools.ali-moradi-develop.com
-    # Nginx on the host proxies to this; Docker bypasses ufw, so bind to localhost only
+    # Nginx on the host proxies to this; Docker bypasses ufw, so loopback only
     ports:
       - "127.0.0.1:3105:3000"
     networks: [frontend]
-    depends_on: [api]
+    depends_on:
+      api:
+        condition: service_healthy
+    read_only: true
+    # next/image writes its optimized images here
+    tmpfs:
+      - /tmp
+      - "/app/apps/web/.next/cache:uid=1000,gid=1000"
     security_opt: [no-new-privileges:true]
     mem_limit: 384m
     restart: unless-stopped
 
 networks:
   backend:
-    internal: true
+    internal: true # the database has no internet and nothing outside reaches it
   frontend: {}
 
 volumes:

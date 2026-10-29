@@ -1,24 +1,39 @@
-# Deploy (roadmap phase 8)
+# Deploy
 
-- `compose.yaml` — MySQL 8.4 (no published port, internal network, 128 MB buffer
-  pool, `performance_schema` off, memory limits), API (read-only filesystem, non-root, `no-new-privileges`)
-  and web (only port, bound to `127.0.0.1:3105`). Images come from ghcr.io.
-- `.env.example` — secrets to put in `/srv/apps/shop-tools/.env`.
-- `nginx.conf` — host Nginx site; run `nginx -t` before `systemctl reload nginx`,
-  then `certbot --nginx -d shop-tools.ali-moradi-develop.com`.
+Live at https://shop-tools.ali-moradi-develop.com. One VPS, host Nginx in front, every app in
+`/srv/apps/<name>`. The reusable deploy comes from
+[deploy-kit](https://github.com/ali-moradi-design/deploy-kit) (`deploy-app.yml` + `server/deploy-app`).
 
-First start and seed:
+- `compose.yaml` — MySQL 8.4 (no published port, internal network, 128 MB buffer pool,
+  `performance_schema` off), API (applies the migrations on start) and web (the only published
+  port, `127.0.0.1:3105`). API and web run read-only, non-root, with `no-new-privileges` and
+  memory limits. Images: `ghcr.io/ali-moradi-design/shop-tools-{api,web}:${IMAGE_TAG}`.
+- `.env.example` — the names in `/srv/apps/shop-tools/.env` (mode 600, owner `deploy`).
+- `nginx.conf` — `/etc/nginx/sites-available/shop-tools`; `nginx -t` before
+  `systemctl reload nginx`, then `certbot --nginx --redirect -d shop-tools.ali-moradi-develop.com`.
+
+## How a change reaches the server
+
+PR → CI green → squash merge. CI on `main` then starts `.github/workflows/docker.yml`
+(`workflow_run`): it builds and pushes both images tagged with the commit SHA, and the deploy job
+connects with a key whose forced command is `deploy-app shop-tools`. The server sets `IMAGE_TAG`,
+pulls, runs `docker compose up -d --wait` and rolls back by itself when the new containers are
+not healthy. The deploy job then checks `/`, `/robots.txt` and `/api/health` through Nginx.
+
+## Once, after the first deploy
 
 ```bash
-docker compose pull && docker compose up -d   # the API applies the migrations on start
-docker compose exec api node dist/scripts/seed.js
+cd /srv/apps/shop-tools && sudo -u deploy docker compose exec -T api node dist/scripts/seed.js
 ```
 
-Nightly demo reset (crontab of the deploy user):
+Nightly demo reset (crontab of `deploy`):
 
 ```cron
-30 3 * * * cd /srv/apps/shop-tools && docker compose exec -T api node dist/scripts/reset-demo.js
+20 3 * * * cd /srv/apps/shop-tools && docker compose exec -T api node dist/scripts/reset-demo.js 2>&1 | logger -t shop-tools-reset
 ```
 
-The web image builds without the API (pages are rendered per request); `API_URL`
-is read at runtime.
+Manual rollback:
+
+```bash
+cd /srv/apps/shop-tools && sudo -u deploy cp .env.previous .env && sudo -u deploy docker compose up -d --wait
+```

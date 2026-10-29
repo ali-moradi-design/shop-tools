@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Barlow_Condensed, IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { SiteHeader } from '@/widgets/header';
 import { SiteFooter } from '@/widgets/footer';
@@ -10,13 +10,32 @@ import { Icon } from '@/shared/ui';
 import { CartButton, CartDrawer, CartProvider } from '@/features/cart';
 import { CompareProvider, CompareTray } from '@/features/compare';
 
-const display = Barlow_Condensed({
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
+// Fonts are stored in the repo (./fonts, Latin subset from Fontsource, SIL OFL), so the
+// build never downloads them and the site makes no request to Google Fonts.
+const display = localFont({
+  src: [
+    { path: './fonts/barlow-condensed-latin-500-normal.woff2', weight: '500' },
+    { path: './fonts/barlow-condensed-latin-600-normal.woff2', weight: '600' },
+    { path: './fonts/barlow-condensed-latin-700-normal.woff2', weight: '700' },
+  ],
   variable: '--font-barlow',
 });
-const sans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-plex-sans' });
-const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-plex-mono' });
+const sans = localFont({
+  src: [
+    { path: './fonts/ibm-plex-sans-latin-400-normal.woff2', weight: '400' },
+    { path: './fonts/ibm-plex-sans-latin-500-normal.woff2', weight: '500' },
+    { path: './fonts/ibm-plex-sans-latin-600-normal.woff2', weight: '600' },
+  ],
+  variable: '--font-plex-sans',
+});
+const mono = localFont({
+  src: [
+    { path: './fonts/ibm-plex-mono-latin-400-normal.woff2', weight: '400' },
+    { path: './fonts/ibm-plex-mono-latin-500-normal.woff2', weight: '500' },
+    { path: './fonts/ibm-plex-mono-latin-600-normal.woff2', weight: '600' },
+  ],
+  variable: '--font-plex-mono',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
