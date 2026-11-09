@@ -223,3 +223,12 @@ What was done in each session, in order. Updated at the end of every step.
   failed when that download broke. The nine Latin woff2 files (Barlow Condensed 500-700,
   IBM Plex Sans and Mono 400-600, from Fontsource 5, SIL OFL with the license files) now live in
   `apps/web/src/app/fonts` and load through `next/font/local`. The build works without network.
+
+## Header and hero in the page container
+
+- On wide screens the header rows and the home hero ran edge to edge while the sections below
+  sat in the 1440px `container-page`, so the logo, search and headline did not line up with the
+  rest of the page. The bands (black utility bar, borders, white hero) still span the full
+  width; their content now sits in `container-page`. The hero image keeps its frame with a left
+  and right border; on mobile it stays full width.
+- Checked at 2400, 1280 and 390px: no horizontal scroll.
