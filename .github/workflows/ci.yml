@@ -71,7 +71,8 @@ jobs:
 
   e2e:
     name: E2E (purchase path + axe)
-    runs-on: ubuntu-latest
+    # Playwright 1.56 cannot install Chromium on ubuntu-latest (26.04); pin until Playwright is upgraded.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     services:
       mysql:
