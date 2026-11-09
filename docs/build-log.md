@@ -232,3 +232,6 @@ What was done in each session, in order. Updated at the end of every step.
   width; their content now sits in `container-page`. The hero image keeps its frame with a left
   and right border; on mobile it stays full width.
 - Checked at 2400, 1280 and 390px: no horizontal scroll.
+- CI: `ubuntu-latest` moved to 26.04, where Playwright 1.56 cannot install Chromium, so the E2E
+  job failed before any test ran. The E2E job is pinned to `ubuntu-24.04` until Playwright is
+  upgraded.
