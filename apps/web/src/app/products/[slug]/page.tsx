@@ -8,7 +8,7 @@ import { BuyBox, BuyBoxSkeleton } from '@/features/add-to-cart';
 import { CompareToggle } from '@/features/compare';
 import { FavoriteButton } from '@/features/favorite';
 import { ReviewForm, ReviewList } from '@/features/reviews';
-import { Details, Gallery } from '@/widgets/product-detail';
+import { Details, Gallery, RecentlyViewed, RelatedProducts, ShareButton } from '@/widgets/product-detail';
 import { SITE } from '@/shared/config';
 import { formatMoney } from '@/shared/lib/money';
 import { Stars } from '@/shared/ui';
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /** Live stock per variant and warehouse, streamed so the rest of the page is not held back. */
 async function LiveBuyBox({ product }: { product: Product }) {
   const [variants, warehouses] = await Promise.all([fetchLiveVariants(product.slug), fetchWarehouses()]);
-  return <BuyBox productId={product.id} price={product.price} variants={variants} warehouses={warehouses} />;
+  return <BuyBox productId={product.id} title={product.title} price={product.price} variants={variants} warehouses={warehouses} />;
 }
 
 function JsonLd({ product }: { product: Product }) {
@@ -81,6 +81,7 @@ export default async function ProductPage({ params }: Props) {
   const category = await fetchCategory(product.category);
   const unitsByKey = Object.fromEntries((category?.specs ?? []).map((s) => [s.key, s.units]));
   const keySpecs = product.specs.slice(0, 5);
+  const percentOff = product.compareAtPrice ? Math.round((1 - product.price / product.compareAtPrice) * 100) : 0;
 
   return (
     <div className="container-page pb-28">
@@ -91,7 +92,7 @@ export default async function ProductPage({ params }: Props) {
         <span className="text-ink" aria-current="page">{product.model ?? product.slug}</span>
       </nav>
       <section className="grid gap-9 lg:grid-cols-[1.1fr_1fr]">
-        <Gallery images={product.images} title={product.title} badge={product.compareAtPrice ? `Save ${formatMoney(product.compareAtPrice - product.price)}` : undefined} />
+        <Gallery images={product.images} title={product.title} badge={percentOff > 0 ? `−${percentOff}%` : undefined} />
         <div className="space-y-4">
           <p className="font-mono text-[12px] text-mute">SKU {product.model ?? product.slug}{product.brand ? ` · BRAND: ${product.brand.toUpperCase()}` : ''}</p>
           <div className="flex items-start justify-between gap-4">
@@ -106,7 +107,12 @@ export default async function ProductPage({ params }: Props) {
           )}
           <p className="flex items-baseline gap-3">
             <span className="font-display text-[44px] font-bold leading-none" data-testid="product-price">{formatMoney(product.price, product.currency)}</span>
-            {product.compareAtPrice && <s className="font-mono text-mute">{formatMoney(product.compareAtPrice, product.currency)}</s>}
+            {product.compareAtPrice && (
+              <>
+                <s className="font-mono text-mute">{formatMoney(product.compareAtPrice, product.currency)}</s>
+                <span className="tag tag-accent">Save {formatMoney(product.compareAtPrice - product.price, product.currency)} ({percentOff}%)</span>
+              </>
+            )}
           </p>
           {keySpecs.length > 0 && (
             <dl className="border-t-2 border-ink font-mono text-[12px]">
@@ -121,7 +127,10 @@ export default async function ProductPage({ params }: Props) {
           <Suspense fallback={<BuyBoxSkeleton />}>
             <LiveBuyBox product={product} />
           </Suspense>
-          <CompareToggle item={{ slug: product.slug, title: product.title, image: product.images[0], category: product.category, categoryName: product.categoryName }} className="text-[13px]" />
+          <div className="flex items-center gap-5">
+            <CompareToggle item={{ slug: product.slug, title: product.title, image: product.images[0], category: product.category, categoryName: product.categoryName }} className="text-[13px]" />
+            <ShareButton title={product.title} />
+          </div>
         </div>
       </section>
 
@@ -130,7 +139,7 @@ export default async function ProductPage({ params }: Props) {
         <div id="reviews" className="panel scroll-mt-40 p-5">
           <h2 className="heading mb-3 text-[28px]">Customer reviews</h2>
           <Suspense fallback={<div className="h-40" />}>
-            <ReviewList slug={product.slug} />
+            <ReviewList productId={product.id} />
           </Suspense>
           <h3 className="heading mb-3 mt-8 text-[22px]">Write a review</h3>
           <ReviewForm productId={product.id} />
@@ -139,6 +148,10 @@ export default async function ProductPage({ params }: Props) {
       <div className="mt-8">
         <Details product={product} />
       </div>
+      <Suspense fallback={null}>
+        <RelatedProducts product={product} />
+      </Suspense>
+      <RecentlyViewed current={{ slug: product.slug, title: product.title, image: product.images[0], price: lowestPrice(product) }} />
     </div>
   );
 }

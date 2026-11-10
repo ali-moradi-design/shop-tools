@@ -78,6 +78,13 @@ export class PrismaReviewRepository implements IReviewRepository {
     return { avg: Math.round(avg * 10) / 10, count: agg._count._all };
   }
 
+  async starCounts(productId: string): Promise<number[]> {
+    const rows = await getPrisma().review.groupBy({ by: ['rating'], where: { productId, ...live }, _count: { _all: true } });
+    const stars = [0, 0, 0, 0, 0];
+    for (const r of rows) if (r.rating >= 1 && r.rating <= 5) stars[r.rating - 1] = r._count._all;
+    return stars;
+  }
+
   async softDelete(id: string): Promise<Review | null> {
     try {
       const row = await getPrisma().review.update({

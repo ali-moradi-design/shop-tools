@@ -7,11 +7,13 @@ import {
   updateReviewSchema,
   idParamSchema,
   listReviewsQuerySchema,
+  summaryQuerySchema,
 } from '../validators/reviews.validation';
 
 const router = Router();
 
 router.get('/', validate({ query: listReviewsQuerySchema }), ctrl.list);
+router.get('/summary', validate({ query: summaryQuerySchema }), ctrl.summary);
 router.get('/:id', validate({ params: idParamSchema }), ctrl.getById);
 
 router.post('/', authenticate, requirePermission('reviews:create'), validate({ body: createReviewSchema }), ctrl.create);
