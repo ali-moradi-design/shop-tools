@@ -19,6 +19,8 @@ import {
   registerEngagementRoutes,
   registerPromotionsRoutes,
   registerReportingRoutes,
+  registerMessagingRoutes,
+  registerNotifications,
 } from './modules';
 
 const app = express();
@@ -76,7 +78,11 @@ registerReviewsRoutes(apiV1);
 registerEngagementRoutes(apiV1);
 registerPromotionsRoutes(apiV1);
 registerReportingRoutes(apiV1);
+registerMessagingRoutes(apiV1);
 app.use('/api/v1', apiV1);
+
+// customer and staff emails for order and stock events
+registerNotifications();
 
 app.use(notFoundHandler);
 app.use(errorHandler);

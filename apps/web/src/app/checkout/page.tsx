@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { requireUser } from '@/features/auth/server';
+import { requireAccount } from '@/features/auth/server';
 import { CheckoutForm } from '@/features/checkout';
 
 export const metadata: Metadata = { title: 'Checkout', robots: { index: false } };
 
 async function Checkout() {
-  const user = await requireUser('/checkout');
-  return <CheckoutForm name={user.name} />;
+  // one request: profile and saved addresses
+  const account = await requireAccount('/checkout');
+  const address = account.addresses.find((a) => a.isDefault) ?? account.addresses[0];
+  return <CheckoutForm name={account.name} address={address} savedCount={account.addresses.length} />;
 }
 
 export default function CheckoutPage() {

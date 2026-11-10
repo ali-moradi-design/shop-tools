@@ -9,6 +9,9 @@ import { UserService } from '../application/user.service';
 import { PermissionService } from '../application/permission.service';
 import { RoleService } from '../application/role.service';
 import { AuthContextService } from '../application/auth-context.service';
+import { AccountService } from '../application/account.service';
+import { mailer } from '@modules/messaging/mailer';
+import { env } from '@shared/config/env';
 
 export const userRepo = new PrismaUserRepository();
 export const roleRepo = new PrismaRoleRepository();
@@ -28,3 +31,4 @@ export const userService = new UserService(userRepo, passwordHasher);
 export const permissionService = new PermissionService(permissionRepo);
 export const roleService = new RoleService(roleRepo);
 export const authContextService = new AuthContextService(userRepo, roleRepo, tokenService);
+export const accountService = new AccountService(roleRepo, tokenService, passwordHasher, mailer, env.STOREFRONT_URL.replace(/\/$/, ''));

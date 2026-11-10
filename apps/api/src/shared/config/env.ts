@@ -40,6 +40,11 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: optionalString,
   STRIPE_WEBHOOK_SECRET: optionalString,
   PAYMENT_CURRENCY: z.string().length(3).toLowerCase().default('usd'),
+  // email: SMTP when set (any provider); every email is also kept in the admin outbox
+  SMTP_URL: optionalString,
+  MAIL_FROM: z.string().default('Toolbench Supply Co. <no-reply@shop-tools.local>'),
+  // low-stock alerts go here; without it, to every active admin
+  ADMIN_ALERT_EMAIL: optionalString,
   COOKIE_DOMAIN: z
     .string()
     .optional()

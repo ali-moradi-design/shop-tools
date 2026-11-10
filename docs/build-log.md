@@ -395,3 +395,35 @@ Sentry and analytics off.
   tampered webhooks, retries, wrong amount, staff payment, customers get 403); the older tests
   record payments as staff. E2E pays through the simulator (decline, then pay) with axe on the
   simulator page; its muted grey was darkened to pass contrast.
+
+## Port phase 4: email outbox, accounts, newsletter
+
+- New `messaging` module. The mailer sends through SMTP when `SMTP_URL` is set and always keeps a
+  copy in the `EmailMessage` table (Admin → Emails). When an email really went out, one-time
+  tokens (`token=…`) are removed from the stored copy, so staff cannot use someone's reset link
+  (leather-shop #37). Copies older than 90 days are deleted by the API's daily job (MySQL has no
+  TTL index). The mailer never throws, and every event handler is wrapped, so an email problem
+  never fails the request.
+- Templates in the shop's look: welcome, guest welcome, password reset and changed, order
+  confirmed, shipped, cancelled, low stock (to `ADMIN_ALERT_EMAIL` or every active admin),
+  newsletter welcome with an unsubscribe link (return update and back in stock are ready for
+  phases 5 and 6). New events `OrderShipped` and `OrderCancelled` come from the status change.
+- Accounts (`AccountService`, Prisma version from shop-books): forgot/reset password with hashed
+  one-time tokens (1 hour, a new link replaces older ones, claimed atomically, other sessions
+  signed out); guest checkout (`POST /auth/guest`: a passwordless account signed in at once; the
+  same email never signs in a second time and gets a set-password link instead); profile (a new
+  email needs the current password); password change (this session stays signed in); address book
+  (up to 10, one default, no duplicates). Schema: `User.guest`, `User.passwordHash` nullable,
+  `PasswordResetToken`, `Address`, `EmailMessage`, `Subscriber` (migration `accounts_email`).
+- Bug found by the tests: the password-change validator dropped `refreshToken` from the body, so
+  "keep this session" did not work for clients that send it; the schema now allows it.
+- Newsletter: `POST /newsletter` (same answer for new and known addresses, rate limited), the
+  footer form, and an unsubscribe page with a button (mail scanners open links).
+- Web: forgot and reset password pages, "Forgot your password?" on sign-in, "New customer?" guest
+  form on the way to checkout, Account → Settings (profile, password or "set a password" for
+  guests, address book), checkout prefilled from the default address with "Save this address",
+  Admin → Emails (outbox with the text opening in place, subscribers). The account page reads its
+  orders next to the session check, and a leftover leather link (`/collections/mens-boots`) is gone.
+- Env: `SMTP_URL`, `MAIL_FROM`, `ADMIN_ALERT_EMAIL` (optional; `deploy/compose.yaml` passes them).
+- Tests: 7 API tests; 4 E2E (guest checkout and set-password link, forgot password + settings +
+  address at checkout, newsletter + unsubscribe, admin emails) with axe.

@@ -51,7 +51,10 @@ model User {
   id           String    @id @default(cuid())
   name         String
   email        String    @unique
-  passwordHash String
+  /// null for a guest-checkout account until its owner sets a password
+  passwordHash String?
+  /// made at checkout without a password
+  guest        Boolean   @default(false)
   isActive     Boolean   @default(true)
   deletedAt    DateTime?
   createdAt    DateTime  @default(now())
@@ -59,6 +62,8 @@ model User {
 
   roles         UserRole[]
   refreshTokens RefreshToken[]
+  resetTokens   PasswordResetToken[]
+  addresses     Address[]
   orders        Order[]
   reviews       Review[]
   favorites     Favorite[]
@@ -428,4 +433,65 @@ model IssueReport {
 
   @@index([reporterId])
   @@index([status])
+}
+
+/// A one-time password reset (or "set your password") link; only the hash is stored
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// The customer's address book (up to 10; one is the default)
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String?
+  fullName   String
+  line1      String
+  line2      String?
+  city       String
+  state      String?
+  postalCode String
+  country    String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Every email the shop sent, or kept here (the outbox) when no SMTP server is set
+model EmailMessage {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String   @db.VarChar(300)
+  text      String   @db.Text
+  html      String   @db.MediumText
+  template  String   @db.VarChar(60)
+  /// sent | outbox | failed
+  status    String   @db.VarChar(10)
+  error     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([to, createdAt])
+  @@index([createdAt])
+}
+
+/// Newsletter list; the token makes the unsubscribe link unguessable
+model Subscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  token          String    @unique
+  source         String    @default("footer")
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([unsubscribedAt, createdAt])
 }

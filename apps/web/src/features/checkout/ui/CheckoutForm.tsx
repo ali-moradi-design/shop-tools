@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import type { SavedAddress } from '@/features/account';
 import type { Cart } from '@/features/cart';
 import { useCartActions } from '@/features/cart';
 import { clientApi } from '@/shared/api/client';
@@ -11,7 +12,8 @@ import { formatMoney } from '@/shared/lib/money';
 
 type Quote = Cart & { discountCode?: string; discountAmount: number; total: number };
 
-export function CheckoutForm({ name }: { name: string }) {
+/** `address` is the customer's default saved address, used to fill the form. */
+export function CheckoutForm({ name, address, savedCount }: { name: string; address?: SavedAddress; savedCount: number }) {
   const router = useRouter();
   const { refresh } = useCartActions();
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -40,14 +42,19 @@ export function CheckoutForm({ name }: { name: string }) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const shippingAddress = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
-    if (!shippingAddress.line2) delete shippingAddress.line2;
+    const form = new FormData(e.currentTarget);
+    const save = form.get('saveAddress') === 'on';
+    form.delete('saveAddress');
+    const shippingAddress = Object.fromEntries(form) as Record<string, string>;
+    for (const key of ['line2', 'state']) if (!shippingAddress[key]) delete shippingAddress[key];
     try {
       const { data } = await clientApi<{ data: { id: string } }>('/cart/checkout', {
         method: 'POST',
         body: JSON.stringify({ shippingAddress, ...(quote?.discountCode ? { discountCode: quote.discountCode } : {}) }),
       });
       await refresh();
+      // the order is placed; saving the address is a convenience and never blocks payment
+      if (save) await clientApi('/account/addresses', { method: 'POST', body: JSON.stringify(shippingAddress) }).catch(() => {});
       try {
         // Stripe Checkout (or the local simulator) takes over from here
         await startPayment(data.id);
@@ -65,23 +72,30 @@ export function CheckoutForm({ name }: { name: string }) {
     return <p className="py-10 text-center text-mute">Your cart is empty.</p>;
   }
 
-  const field = 'mt-1 block w-full border border-line px-3 py-2.5 outline-none focus:border-ink';
+  const field = 'mt-1 field';
+  const a = address;
   return (
     <div className="grid gap-12 lg:grid-cols-[1fr_420px]">
       <form id="checkout" onSubmit={onSubmit} className="grid grid-cols-2 gap-4 text-[14px]">
         <h2 className="heading col-span-2 text-[22px]">Shipping address</h2>
-        <p className="col-span-2 border border-line bg-soft px-3 py-2 text-[13px]">
+        <p className="col-span-2 border-2 border-ink bg-paper px-3 py-2 text-[13px]">
           Demo shop: please don’t enter real personal data. The demo account is shared and all orders are deleted every night.
         </p>
-        <label className="col-span-2">Full name<input name="fullName" required defaultValue={name} autoComplete="name" className={field} /></label>
-        <label className="col-span-2">Address<input name="line1" required autoComplete="address-line1" className={field} /></label>
-        <label className="col-span-2">Apartment, suite (optional)<input name="line2" autoComplete="address-line2" className={field} /></label>
-        <label>City<input name="city" required autoComplete="address-level2" className={field} /></label>
-        <label>State / region<input name="state" autoComplete="address-level1" className={field} /></label>
-        <label>Postal code<input name="postalCode" required autoComplete="postal-code" className={field} /></label>
-        <label>Country<input name="country" required defaultValue="United States" autoComplete="country-name" className={field} /></label>
+        <label className="col-span-2">Full name<input name="fullName" required defaultValue={a?.fullName ?? name} autoComplete="name" className={field} /></label>
+        <label className="col-span-2">Address<input name="line1" required defaultValue={a?.line1} autoComplete="address-line1" className={field} /></label>
+        <label className="col-span-2">Apartment, suite (optional)<input name="line2" defaultValue={a?.line2} autoComplete="address-line2" className={field} /></label>
+        <label>City<input name="city" required defaultValue={a?.city} autoComplete="address-level2" className={field} /></label>
+        <label>State / region<input name="state" defaultValue={a?.state} autoComplete="address-level1" className={field} /></label>
+        <label>Postal code<input name="postalCode" required defaultValue={a?.postalCode} autoComplete="postal-code" className={field} /></label>
+        <label>Country<input name="country" required defaultValue={a?.country ?? 'United States'} autoComplete="country-name" className={field} /></label>
+        {a && <p className="col-span-2 text-[13px] text-mute">Filled in from your saved address. <a href="/account/settings" className="link-underline">Manage addresses</a></p>}
+        {savedCount < 10 && (
+          <label className="col-span-2 flex items-center gap-2">
+            <input type="checkbox" name="saveAddress" defaultChecked={savedCount === 0} className="h-4 w-4 accent-ink" /> Save this address to my account
+          </label>
+        )}
       </form>
-      <aside className="self-start border border-line bg-white p-6" aria-label="Order summary">
+      <aside className="panel self-start p-6" aria-label="Order summary">
         <h2 className="heading text-[22px]">Order summary</h2>
         {!quote ? (
           <p className="mt-4 text-mute">Loading…</p>
@@ -108,7 +122,7 @@ export function CheckoutForm({ name }: { name: string }) {
                 <div className="flex justify-between"><dt>Discount ({quote.discountCode})</dt><dd>−{formatMoney(quote.discountAmount)}</dd></div>
               )}
               <div className="flex justify-between"><dt>Shipping</dt><dd>Free</dd></div>
-              <div className="flex justify-between border-t border-line pt-3 font-serif text-[22px] font-bold"><dt>Total</dt><dd data-testid="checkout-total">{formatMoney(quote.total)}</dd></div>
+              <div className="flex justify-between border-t border-line pt-3 font-display text-[22px] font-bold"><dt>Total</dt><dd data-testid="checkout-total">{formatMoney(quote.total)}</dd></div>
             </dl>
           </>
         )}

@@ -15,6 +15,7 @@ import {
 } from '@modules/ordering/domain/order.transitions';
 import { DomainError } from '@shared/domain/DomainError';
 import { paginate } from '@shared/pagination';
+import { domainEvents, orderCancelledEvent, orderShippedEvent } from '@shared/domain/events';
 import { buildOrderLines } from '@modules/ordering/domain/rules/order.lines';
 import { computeSubtotal, computeOrderTotal } from '@modules/ordering/domain/rules/cart.totals';
 import { PayOrderUseCase, type PaymentReceipt } from './use-cases/pay-order';
@@ -143,6 +144,9 @@ export class OrderService {
 
     order.status = nextStatus;
     order.statusHistory.push({ status: nextStatus, at: new Date(), note });
-    return this.orders.save(order);
+    const saved = await this.orders.save(order);
+    if (nextStatus === 'shipped') await domainEvents.publish(orderShippedEvent({ orderId: saved.id, userId: saved.user }));
+    if (nextStatus === 'cancelled') await domainEvents.publish(orderCancelledEvent({ orderId: saved.id, userId: saved.user }));
+    return saved;
   }
 }

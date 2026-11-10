@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { authService } from '../../infra/wiring';
 import { asyncHandler } from '@shared/http/asyncHandler';
 import { AppError } from '@shared/errors/AppError';
+import { mailer } from '@modules/messaging/mailer';
+import { templates } from '@modules/messaging/templates';
 import {
   setAuthCookies,
   clearAuthCookies,
@@ -11,6 +13,8 @@ import {
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.register(req.body);
   setAuthCookies(res, result);
+  // never throws: an email problem must not fail the sign-up
+  await mailer.send({ to: result.user.email, template: 'welcome', ...templates.welcome(result.user.name) });
   res.status(201).json(result);
 });
 

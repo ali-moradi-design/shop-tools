@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Category } from '@/entities/category';
+import { NewsletterForm } from '@/features/newsletter';
 import { SITE } from '@/shared/config';
 
 export function SiteFooter({ categories }: { categories: Category[] }) {
@@ -12,6 +13,7 @@ export function SiteFooter({ categories }: { categories: Category[] }) {
             A demo shop for a portfolio. Product photos belong to their owners and are used only as sample content;
             prices and stock are generated and the payment gateway is simulated.
           </p>
+          <NewsletterForm className="mt-5 max-w-md" />
         </div>
         <div>
           <h2 className="mb-2 font-display text-[15px] font-bold uppercase tracking-[0.1em] text-white">Shop</h2>
