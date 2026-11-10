@@ -17,11 +17,13 @@ export async function apiGetJson<T>(path: string, init?: FetchInit): Promise<T> 
     },
   });
   if (!res.ok) {
-    let body: unknown;
+    // the body can be read once: as text, then parsed (a second read throws "Body is unusable")
+    const text = await res.text().catch(() => '');
+    let body: unknown = text;
     try {
-      body = await res.json();
+      body = JSON.parse(text);
     } catch {
-      body = await res.text();
+      /* not JSON: keep the text */
     }
     const detail =
       typeof body === 'object' && body && 'message' in body

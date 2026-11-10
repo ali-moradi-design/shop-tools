@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { fetchCategory, fetchWarehouses } from '@/entities/category';
-import { fetchLiveVariants, fetchProduct, lowestPrice, SpecTable, type Product } from '@/entities/product';
+import { fetchProduct, lowestPrice, SpecTable, type Product } from '@/entities/product';
 import { BuyBox, BuyBoxSkeleton } from '@/features/add-to-cart';
 import { CompareToggle } from '@/features/compare';
 import { FavoriteButton } from '@/features/favorite';
@@ -26,11 +26,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** Live stock per variant and warehouse, streamed so the rest of the page is not held back. */
+/**
+ * Stock per variant and warehouse (the page renders per request, so the product is current)
+ * and the visitor's A/B variant, streamed so the rest of the page is not held back.
+ */
 async function LiveBuyBox({ product }: { product: Product }) {
-  // the variant cookie is read here, in the part that is per visitor anyway
-  const [variants, warehouses, cta] = await Promise.all([fetchLiveVariants(product.slug), fetchWarehouses(), getVariant('pdp-cta')]);
-  return <BuyBox productId={product.id} title={product.title} price={product.price} variants={variants} warehouses={warehouses} ctaVariant={cta} />;
+  const [warehouses, cta] = await Promise.all([fetchWarehouses(), getVariant('pdp-cta')]);
+  return <BuyBox productId={product.id} title={product.title} price={product.price} variants={product.variants} warehouses={warehouses} ctaVariant={cta} />;
 }
 
 export default async function ProductPage({ params }: Props) {

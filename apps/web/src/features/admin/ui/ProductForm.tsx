@@ -32,6 +32,8 @@ export function ProductForm({ product, categories, warehouses }: Props) {
   const save = useAction();
   const remove = useAction();
   const codes = warehouses.map((w) => w.code);
+  // built once: useForm reads defaultValues only on the first render
+  const [defaults] = useState(() => productToFormValues(product, codes, categories[0]?.slug));
   const {
     register,
     control,
@@ -41,7 +43,7 @@ export function ProductForm({ product, categories, warehouses }: Props) {
     formState: { errors, isDirty },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: productToFormValues(product, codes, categories[0]?.slug),
+    defaultValues: defaults,
     mode: 'onTouched',
   });
 

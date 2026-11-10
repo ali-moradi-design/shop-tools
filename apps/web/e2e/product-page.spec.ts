@@ -51,3 +51,21 @@ test('product page on a phone: the add-to-cart bar sticks once the button scroll
   await bar.getByRole('button', { name: 'Add to cart' }).click();
   await expect(page.getByTestId('cart-button')).toContainText('1');
 });
+
+test('client navigation through several product pages keeps working', async ({ page, request }) => {
+  const { data } = await (await request.get('http://localhost:4000/api/v1/products?category=drills&inStock=true&limit=4')).json();
+  await page.goto('/categories/drills?instock=1', { waitUntil: 'networkidle' });
+  for (const p of data.slice(0, 3) as { slug: string; title: string }[]) {
+    await page.goto('/categories/drills?instock=1');
+    await page.locator('#main').getByRole('link', { name: p.title, exact: true }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/products/${p.slug}$`));
+    await expect(page.locator('#main').getByRole('heading', { level: 1 })).toHaveText(p.title);
+    await expect(page.locator('#main').getByTestId('add-to-cart')).toBeVisible();
+    // and on to a related product, without a full page load
+    const related = page.locator('#main').getByRole('region', { name: /^More / }).getByTestId('product-card').first();
+    if (await related.count()) {
+      await related.getByRole('link').first().click();
+      await expect(page.locator('#main').getByTestId('add-to-cart')).toBeVisible();
+    }
+  }
+});

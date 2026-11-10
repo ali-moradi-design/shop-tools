@@ -35,12 +35,6 @@ export async function fetchProduct(slug: string): Promise<Product | null> {
   }
 }
 
-/** Live stock per variant and warehouse; streamed inside a Suspense boundary so the page shell is not blocked. */
-export async function fetchLiveVariants(slug: string): Promise<Product['variants']> {
-  const res = await apiGetJson<ApiData<Product>>(`/products/slug/${encodeURIComponent(slug)}`);
-  return res.data.variants;
-}
-
 /** 2 to 4 products of one category, side by side. */
 export async function fetchComparison(slugs: string[]): Promise<Comparison | null> {
   try {
