@@ -310,10 +310,12 @@ model Order {
   discountAmount     Int           @default(0)
   totalAmount        Int
   status             OrderStatus   @default(pending_payment)
-  paymentMethod      String        @default("fake")
+  paymentMethod      String        @default("stripe")
   paymentStatus      PaymentStatus @default(pending)
   paidAt             DateTime?
   transactionId      String?
+  /// the open Stripe Checkout Session of an unpaid order
+  checkoutSessionId  String?       @unique
   shippingFullName   String
   shippingLine1      String
   shippingLine2      String?

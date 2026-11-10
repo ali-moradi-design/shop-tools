@@ -44,6 +44,7 @@
     "morgan": "^1.12.1",
     "multer": "^2.4.0",
     "prisma": "6.19.3",
+    "stripe": "^23.1.0",
     "swagger-ui-express": "^5.0.1",
     "zod": "^4.6.5"
   },

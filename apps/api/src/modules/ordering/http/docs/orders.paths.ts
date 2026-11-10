@@ -26,11 +26,30 @@ export const ordersPaths = {
       responses: { 200: { description: 'Order', ...data(ref('Order')) }, 403: errors[403], 404: errors[404] },
     },
   },
+  '/api/v1/orders/{id}/checkout': {
+    post: {
+      tags: ['Orders'],
+      summary: 'Start paying an order (Stripe Checkout)',
+      description: [
+        'Returns the URL of a Stripe Checkout Session for the order (owner only, order must be `pending_payment`).',
+        'An open session is reused, so two tabs cannot pay twice. Without a Stripe key (`mode: mock`) the URL opens the shop\'s own simulator at `/pay/<session id>`.',
+        'The order becomes `paid` only when the signed `checkout.session.completed` webhook arrives (POST /payments/stripe/webhook); the redirect back proves nothing.',
+      ].join('\n'),
+      security: signedIn,
+      parameters: [path('id')],
+      responses: {
+        200: { description: 'Where to send the customer', ...data({ type: 'object', properties: { url: { type: 'string' }, mode: { type: 'string', enum: ['stripe', 'mock'] } } }) },
+        400: errors[400],
+        403: errors[403],
+        404: errors[404],
+      },
+    },
+  },
   '/api/v1/orders/{id}/pay': {
     post: {
       tags: ['Orders'],
-      summary: 'Pay with the simulated gateway',
-      description: 'The only payment method is `fake`. Takes the stock of each size atomically; if a size ran out the order becomes `failed` (409).',
+      summary: 'Record a payment by hand (staff)',
+      description: 'For money received outside Stripe. Takes the stock warehouse by warehouse atomically; if an option ran out the order becomes `failed` (409). Customers get 403.',
       security: signedIn,
       parameters: [path('id')],
       responses: {
@@ -39,6 +58,14 @@ export const ordersPaths = {
         404: errors[404],
         409: { description: 'Insufficient stock' },
       },
+    },
+  },
+  '/api/v1/payments/stripe/webhook': {
+    post: {
+      tags: ['Orders'],
+      summary: 'Stripe webhook',
+      description: 'Verified with the `Stripe-Signature` header. `checkout.session.completed` with the exact amount marks the order paid; retries are no-ops; a wrong amount is logged and ignored.',
+      responses: { 200: { description: 'Received' }, 400: { description: 'Bad or missing signature' } },
     },
   },
   '/api/v1/orders/{id}/status': {

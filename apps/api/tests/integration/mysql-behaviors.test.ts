@@ -100,9 +100,9 @@ describe('MySQL behaviours', () => {
       { id: b.id, sku: 'ATOM-B' },
     ]);
     const orderY = await buy(y.accessToken, [{ id: b.id, sku: 'ATOM-B' }]);
-    await ctx.request.post(`/api/v1/orders/${orderY}/pay`).set(authHeader(y.accessToken)).expect(200);
+    await ctx.request.post(`/api/v1/orders/${orderY}/pay`).set(authHeader(ctx.adminToken)).expect(200);
 
-    await ctx.request.post(`/api/v1/orders/${orderX}/pay`).set(authHeader(x.accessToken)).expect(409);
+    await ctx.request.post(`/api/v1/orders/${orderX}/pay`).set(authHeader(ctx.adminToken)).expect(409);
 
     // line A was taken first, but the transaction rolled it back
     expect((await repos.products.findById(a.id))?.stock).toBe(5);

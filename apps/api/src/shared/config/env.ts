@@ -12,6 +12,11 @@ const optionalBool = z
     return ['true', '1', 'yes'].includes(v.trim().toLowerCase());
   });
 
+const optionalString = z
+  .string()
+  .optional()
+  .transform((v) => (v?.trim() ? v.trim() : undefined));
+
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().min(1),
@@ -29,6 +34,12 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default('uploads'),
   COOKIE_SECURE: optionalBool,
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+  // where Stripe sends the customer back to (the storefront's public address)
+  STOREFRONT_URL: z.string().url().default('http://localhost:3000'),
+  // Stripe test mode; without a key the local Checkout simulator is used
+  STRIPE_SECRET_KEY: optionalString,
+  STRIPE_WEBHOOK_SECRET: optionalString,
+  PAYMENT_CURRENCY: z.string().length(3).toLowerCase().default('usd'),
   COOKIE_DOMAIN: z
     .string()
     .optional()
@@ -46,6 +57,16 @@ if (!parsed.success) {
 }
 
 const data = parsed.data;
+
+// a demo shop: never take real money
+if (data.STRIPE_SECRET_KEY && !data.STRIPE_SECRET_KEY.startsWith('sk_test_')) {
+  console.error('STRIPE_SECRET_KEY must be a test key (sk_test_...)');
+  process.exit(1);
+}
+if (data.STRIPE_SECRET_KEY && !data.STRIPE_WEBHOOK_SECRET) {
+  console.error('STRIPE_WEBHOOK_SECRET is required when STRIPE_SECRET_KEY is set');
+  process.exit(1);
+}
 
 // Production refuses guessable secrets and a wildcard CORS origin.
 if (data.NODE_ENV === 'production') {

@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import type { Order } from '../domain/order.entity';
+import { PAYMENT_METHODS, type Order, type PaymentMethod } from '../domain/order.entity';
 import type { Cart } from '../domain/cart.entity';
 
 export const orderInclude = {
@@ -34,10 +34,11 @@ export function mapOrder(row: OrderRow): Order {
     totalAmount: row.totalAmount,
     status: row.status,
     payment: {
-      method: 'fake',
+      method: (PAYMENT_METHODS as readonly string[]).includes(row.paymentMethod) ? (row.paymentMethod as PaymentMethod) : 'fake',
       status: row.paymentStatus,
       paidAt: row.paidAt ?? undefined,
       transactionId: row.transactionId ?? undefined,
+      checkoutSessionId: row.checkoutSessionId ?? undefined,
     },
     shippingAddress: {
       fullName: row.shippingFullName,

@@ -1,4 +1,4 @@
-export { registerOrderingRoutes } from './http/registerRoutes';
+export { registerOrderingRoutes, registerPaymentWebhook } from './http/registerRoutes';
 export { cartRepo, orderRepo, cartService, orderService } from './infra/wiring';
 export type { Order, OrderStatus, ShippingAddress } from './domain/order.entity';
 export type { IOrderRepository, OrderStatsFilter } from './domain/order.repository';

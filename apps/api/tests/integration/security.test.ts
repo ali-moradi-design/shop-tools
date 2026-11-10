@@ -55,7 +55,7 @@ describe('Security checks (integration)', () => {
       }
     });
 
-    it("one customer cannot read or pay another customer's order", async () => {
+    it("one customer cannot read another customer's order, and no customer can mark an order paid", async () => {
       const owner = await registerCustomer(ctx.request);
       const other = await registerCustomer(ctx.request);
       const products = await ctx.request.get(`${API}/products?limit=1&inStock=true`).expect(200);
@@ -66,8 +66,9 @@ describe('Security checks (integration)', () => {
 
       const read = await ctx.request.get(`${API}/orders/${order.id}`).set(authHeader(other.accessToken));
       expect([403, 404]).toContain(read.status);
-      const pay = await ctx.request.post(`${API}/orders/${order.id}/pay`).set(authHeader(other.accessToken));
-      expect([403, 404]).toContain(pay.status);
+      await ctx.request.post(`${API}/orders/${order.id}/pay`).set(authHeader(other.accessToken)).expect(403);
+      // not even the owner: customers pay through Stripe, and only its signed webhook marks orders paid
+      await ctx.request.post(`${API}/orders/${order.id}/pay`).set(authHeader(owner.accessToken)).expect(403);
       const stillPending = await ctx.request.get(`${API}/orders/${order.id}`).set(authHeader(owner.accessToken)).expect(200);
       expect(stillPending.body.data.status).toBe('pending_payment');
     });
@@ -188,7 +189,7 @@ describe('Security checks (integration)', () => {
       }
 
       const results = await Promise.all(
-        buyers.map((b, i) => ctx.request.post(`${API}/orders/${orderIds[i]}/pay`).set(authHeader(b.accessToken))),
+        orderIds.map((id) => ctx.request.post(`${API}/orders/${id}/pay`).set(authHeader(ctx.adminToken))),
       );
       const ok = results.filter((r) => r.status === 200).length;
       const refused = results.filter((r) => r.status === 409).length;
