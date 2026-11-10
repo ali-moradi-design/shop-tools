@@ -537,3 +537,18 @@ Sentry and analytics off.
   them in now would only add unused dependencies.
 - Tests: E2E for the noindex header and tag, `robots.txt` (web and API) and the missing sitemap, and
   the FAQ search with axe.
+
+## Review round 1: performance and re-renders
+
+- Fixed a crash in `fetcher`: on an error it read the body twice (`json()` then `text()`), and the
+  second read throws "Body is unusable", which hid the API's error message. It now reads the text
+  once and parses it. Unit test added.
+- The product page fetched the variants twice (the product already has them, and `fetchLiveVariants`
+  asked again). The extra request is gone; the live buy box uses `product.variants`.
+- The compare toggle decided inside a state updater, which React may run twice in Strict Mode; the
+  decision is now made outside the updater.
+- The product form built its default values on every render; they are now built once with a lazy
+  `useState`.
+- Measured API calls per page (Next.js merges duplicate requests in one render): product page 7,
+  home 3, category 4.
+- Tests: E2E for client navigation through several product pages in a row.

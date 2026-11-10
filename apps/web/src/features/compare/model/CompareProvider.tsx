@@ -59,21 +59,23 @@ export function CompareProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, ready]);
 
-  const toggle = useCallback((item: CompareItem) => {
-    setMessage(null);
-    setItems((current) => {
-      if (current.some((i) => i.slug === item.slug)) return current.filter((i) => i.slug !== item.slug);
-      if (current.length > 0 && current[0].category !== item.category) {
-        setMessage(`You are comparing ${current[0].categoryName}. Clear the tray to compare ${item.categoryName}.`);
-        return current;
-      }
-      if (current.length >= COMPARE_MAX) {
+  // decided from the current list, outside the state updater (React may call updaters twice)
+  const toggle = useCallback(
+    (item: CompareItem) => {
+      if (items.some((i) => i.slug === item.slug)) {
+        setMessage(null);
+        setItems(items.filter((i) => i.slug !== item.slug));
+      } else if (items.length > 0 && items[0].category !== item.category) {
+        setMessage(`You are comparing ${items[0].categoryName}. Clear the tray to compare ${item.categoryName}.`);
+      } else if (items.length >= COMPARE_MAX) {
         setMessage(`You can compare up to ${COMPARE_MAX} tools.`);
-        return current;
+      } else {
+        setMessage(null);
+        setItems([...items, item]);
       }
-      return [...current, item];
-    });
-  }, []);
+    },
+    [items],
+  );
 
   const value = useMemo<CompareState>(
     () => ({
