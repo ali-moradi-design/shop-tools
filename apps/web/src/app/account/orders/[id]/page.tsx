@@ -10,6 +10,7 @@ import { requireUser } from '@/features/auth/server';
 import { ApiError } from '@/shared/api';
 import { serverApi } from '@/shared/api/server';
 import { WAREHOUSE_NAMES } from '@/shared/config';
+import { trackServerConversion } from '@/shared/lib/ab/server';
 import { early } from '@/shared/lib/early';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -38,6 +39,8 @@ async function OrderView({ params, searchParams }: Props) {
   // the return URL proves nothing (anyone can open it); only the order's status counts
   const { checkout } = await searchParams;
   const unpaid = order.status === 'pending_payment';
+  // the purchase counts for the visitor's A/B tests once the webhook has confirmed it
+  if (checkout === 'success' && !unpaid) await trackServerConversion('purchase');
   const returnable = order.status === 'shipped' || order.status === 'completed' ? returnableLines(order, returns) : [];
   return (
     <>

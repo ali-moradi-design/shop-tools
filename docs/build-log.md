@@ -497,3 +497,25 @@ Sentry and analytics off.
 - Tests: CSV unit tests (quoting, formula defence, parsing); 5 API tests (insights, export and
   import round trip with a broken row, exports staff-only, activity log, built-in roles); E2E for
   roles, activity, import check and the dashboard insights, with axe.
+
+## Port phase 8: A/B testing
+
+- One experiment, `pdp-cta` (`shared/lib/ab/experiments.ts`): the product page buy box with the price
+  only (control) or with "Free shipping over $150 · 30-day returns · 2-year warranty" above the
+  button (benefits), 50/50.
+- The existing nonce `proxy.ts` now also gives a new visitor an id and a sticky variant per test (180
+  days) before the page renders, adding the cookies to the same request, so the first render already
+  shows the right variant (no flash). It skips `/api/`, `/uploads/` and files; prefetches still skip
+  the proxy (its matcher) and carry the cookies from the first page view, or render the control.
+- The variant is read only inside the live buy box, which is per visitor anyway.
+- Events: `POST /experiments/events` (exposure, add_to_cart, purchase; one row per visitor,
+  experiment and type with a unique index and `createMany({ skipDuplicates })`, so the first
+  variant wins; rate limited) and `GET /experiments/results` with rates, uplift and a two-proportion
+  z-test p-value. Exposure and add-to-cart are sent from the browser with `sendBeacon`; the purchase
+  is sent from the server with `after()` when the order page sees a confirmed payment (shop-books
+  #16), so the visitor does not wait. Admin → A/B tests shows the results. Migration `experiments`.
+- E2E found a race: spec files ran on two workers against one shared database, and the admin spec
+  trashes a catalog product for a moment while another spec buys it ("Product not found"). The
+  E2E run now uses one worker.
+- Tests: 3 API tests (unique visitors, first variant wins, bad input, p-value); 2 E2E (cookies on
+  the first visit, benefits variant, events on the results page with axe).

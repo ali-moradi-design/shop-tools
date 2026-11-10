@@ -13,6 +13,7 @@ const LINKS = [
   { segment: 'customers', href: '/admin/customers', label: 'Customers' },
   { segment: 'reviews', href: '/admin/reviews', label: 'Reviews' },
   { segment: 'emails', href: '/admin/emails', label: 'Emails' },
+  { segment: 'experiments', href: '/admin/experiments', label: 'A/B tests' },
   { segment: 'roles', href: '/admin/roles', label: 'Roles' },
   { segment: 'activity', href: '/admin/activity', label: 'Activity' },
 ] as const;
