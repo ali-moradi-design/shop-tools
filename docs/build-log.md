@@ -290,3 +290,22 @@ Sentry and analytics off.
   messages use ink instead of green (green failed contrast on the grey background).
 - E2E: filter, sort, bulk feature, axe, delete → trash → restore. Checked at 320, 390, 768, 1024
   and 1440px: no horizontal page scroll.
+
+## Port phase 1b: product form
+
+- One form for creating and editing a product (`features/admin/ui/ProductForm.tsx`), built with
+  react-hook-form and a zod schema that the Server Action runs again (`model/product-form.ts`).
+  Sections: basics (name, brand, model, category, URL name), description and features,
+  specifications of the chosen category (numbers in the unit shown), price and sale price,
+  photos, and options with an own price and stock per warehouse.
+- Empty URL name and SKUs are derived from the model and name. Number specs are checked against
+  the category's definitions on the server, so a typo becomes a field error, not a 400.
+- Photos upload straight to the API (through the `/api` proxy, so no Server Action body limit)
+  and are served by a new `/uploads/products/<file>` route on the web origin (only that folder,
+  only image file names), so the CSP and next/image keep working. Arrows change the order; the
+  first photo is the cover.
+- The save bar stays at the bottom of the screen with "Unsaved changes". A new product opens its
+  edit page with "Product created". The old price/stock editor is gone.
+- The `@/shared/api` barrel is not imported from client code (it pulls in a server-only module).
+- Tests: 6 unit tests for the form model; E2E creates a product with a photo and two options,
+  puts it on sale, checks the shop page shows the uploaded photo, then trashes it (with axe).

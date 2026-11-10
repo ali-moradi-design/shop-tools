@@ -65,3 +65,52 @@ test('admin products: filter, sort, bulk feature, trash and restore', async ({ p
   await expect(page.getByRole('status')).toContainText('2 products updated');
   for (const row of picked) await expect(row).not.toContainText('Featured');
 });
+
+test('admin product form: create with a photo and options, edit, then trash', async ({ page }) => {
+  const model = `E2E${Date.now().toString(36).toUpperCase()}`;
+  await signIn(page, '/admin/products/new');
+  await page.getByLabel('Name', { exact: true }).fill('E2E Test Impact Driver');
+  await page.getByLabel('Model (optional)').fill(model);
+  await page.getByLabel('Category').selectOption('drills');
+  await page.getByLabel('Price (USD)').fill('129.00');
+  await page.getByLabel('Max torque (Nm)').fill('205');
+  await page.getByLabel('Motor').fill('Brushless');
+
+  // a demo photo from the catalog stands in for the admin's file
+  await page.locator('input[type=file]').setInputFiles('public/catalog/d25134k-b4.webp');
+  await expect(page.getByText('Cover')).toBeVisible();
+
+  await page.getByLabel('Option, row 1').fill('Body only');
+  await page.getByLabel('Stock in Berlin, row 1').fill('4');
+  await page.getByRole('button', { name: 'Add option' }).click();
+  await page.getByLabel('Option, row 2').fill('Kit');
+  await page.getByLabel('Own price, row 2').fill('199');
+  await page.getByLabel('Stock in Hamburg, row 2').fill('2');
+  await expect(page.getByText('Total stock: 6')).toBeVisible();
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations).toEqual([]);
+
+  await page.getByRole('button', { name: 'Create product' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Product created' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('E2E Test Impact Driver');
+
+  // edit: a sale price, saved in place
+  await page.getByLabel('Price (USD)').fill('99.00');
+  await page.getByLabel('Compare-at price (optional)').fill('129.00');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+
+  // the shop shows it, with the uploaded photo served from the shop's own origin
+  const slug = `${model.toLowerCase()}-e2e-test-impact-driver`;
+  const shop = await page.context().newPage();
+  await shop.goto(`/products/${slug}`);
+  await expect(shop.getByRole('heading', { level: 1 })).toContainText('E2E Test Impact Driver');
+  const photo = shop.locator('img[src*="uploads%2Fproducts"], img[src*="/uploads/products/"]').first();
+  await expect(photo).toBeVisible();
+  await shop.close();
+
+  page.once('dialog', (d) => d.accept());
+  await page.getByRole('button', { name: 'Move to trash' }).click();
+  await expect(page).toHaveURL(/\/admin\/products$/);
+});

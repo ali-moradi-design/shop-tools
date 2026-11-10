@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation';
 import type { Product } from '@/entities/product';
 import { ApiError } from '@/shared/api';
 import { serverApi, serverMutate } from '@/shared/api/server';
+import type { Category } from '@/entities/category';
 import type { ActionResult } from '../model/action-result';
+import { issuesToFieldErrors, productFormSchema, toProductPayload, toSpecs, type ProductFormValues } from '../model/product-form';
 
 /*
  * Admin writes. Each action calls the API with the visitor's own cookies, and the
@@ -22,6 +24,43 @@ function failure(err: unknown, from: string): ActionResult {
 }
 
 const productPath = (id: string) => `/products/${encodeURIComponent(id)}`;
+
+/**
+ * Creates (no id) or updates a product. The form already validated with the same
+ * zod schema; it runs again here because a Server Action can be called directly.
+ */
+export async function saveProduct(id: string | undefined, values: ProductFormValues): Promise<ActionResult> {
+  const parsed = productFormSchema.safeParse(values);
+  if (!parsed.success) {
+    return { status: 'error', message: 'Please fix the highlighted fields.', fieldErrors: issuesToFieldErrors(parsed.error) };
+  }
+  let saved: Product;
+  try {
+    const { data: category } = await serverApi<{ data: Category }>(`/categories/${encodeURIComponent(values.category)}`);
+    const specErrors = toSpecs(values.specs, category.specs).errors;
+    if (Object.keys(specErrors).length) return { status: 'error', message: 'Please fix the highlighted fields.', fieldErrors: specErrors };
+    const data = toProductPayload(values, category.specs);
+    if (id) {
+      saved = (await serverMutate<{ data: Product }>(productPath(id), 'PATCH', data)).data;
+    } else {
+      const { compareAtPrice, ...rest } = data;
+      saved = (await serverMutate<{ data: Product }>('/products', 'POST', compareAtPrice === null ? rest : data)).data;
+    }
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 409) {
+      // a SKU conflict names the SKU; a duplicate slug only says "duplicate"
+      const sku = /SKU/.test(err.message);
+      return sku
+        ? { status: 'error', message: err.message }
+        : { status: 'error', message: 'Another product already uses this URL name.', fieldErrors: { slug: 'Already in use' } };
+    }
+    return failure(err, id ? `/admin/products/${id}` : '/admin/products/new');
+  }
+  if (!id) redirect(`/admin/products/${saved.id}?created=1`);
+  refresh();
+  // the saved product (with generated SKUs, trimmed text) becomes the form's new baseline
+  return { status: 'ok', message: 'Saved. The shop shows the change now.', product: saved };
+}
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
   try {
