@@ -42,11 +42,12 @@ async function OrderDetail({ params }: Props) {
   return (
     <>
       <PageHeader title={`Order ${orderNumber(order.id)}`}>
+        <Link prefetch={false} href={`/admin/orders/${order.id}/label`} className="text-[13px] underline underline-offset-4">Print shipping label</Link>
         <span className="tag">{STATUS_LABEL[order.status]}</span>
       </PageHeader>
       <p className="-mt-3 mb-8 text-[14px] text-mute">Placed {date.format(new Date(order.createdAt))}</p>
 
-      <section className="panel mb-10 p-5">
+      <section id="change-status" className="panel mb-10 scroll-mt-40 p-5">
         <h2 className="heading mb-3 text-[18px]">Change status</h2>
         <OrderStatusSelect orderId={order.id} status={order.status} withNote />
       </section>
@@ -96,10 +97,22 @@ async function OrderDetail({ params }: Props) {
               {a.city}{a.state ? `, ${a.state}` : ''} {a.postalCode}<br />{a.country}
             </address>
           </section>
+          {order.shipment && (
+            <section>
+              <h2 className="heading mb-2 text-[18px]">Shipment</h2>
+              <p>{order.shipment.carrier}</p>
+              {order.shipment.url ? (
+                <a href={order.shipment.url} target="_blank" rel="noopener noreferrer" className="link-underline break-all font-mono">{order.shipment.trackingNumber}</a>
+              ) : (
+                <p className="break-all font-mono">{order.shipment.trackingNumber}</p>
+              )}
+            </section>
+          )}
           <section>
             <h2 className="heading mb-2 text-[18px]">Payment</h2>
             <p className="capitalize">{order.payment.status}{order.payment.paidAt && ` · ${date.format(new Date(order.payment.paidAt))}`}</p>
             {order.payment.transactionId && <p className="break-all font-mono text-[12px] text-mute">{order.payment.transactionId}</p>}
+            {order.refunded && <p className="text-mute">Refunded</p>}
           </section>
           {order.statusHistory && order.statusHistory.length > 0 && (
             <section>

@@ -8,6 +8,7 @@ const LINKS = [
   { segment: null, href: '/admin', label: 'Dashboard' },
   { segment: 'products', href: '/admin/products', label: 'Products' },
   { segment: 'orders', href: '/admin/orders', label: 'Orders' },
+  { segment: 'returns', href: '/admin/returns', label: 'Returns' },
   { segment: 'discounts', href: '/admin/discounts', label: 'Discounts' },
   { segment: 'customers', href: '/admin/customers', label: 'Customers' },
   { segment: 'reviews', href: '/admin/reviews', label: 'Reviews' },

@@ -36,6 +36,12 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
     String(req.params.id),
     req.body.status,
     req.body.note,
+    req.body.shipment,
   );
+  res.json({ data: presentOrder(order) });
+});
+
+export const cancelOwn = asyncHandler(async (req: Request, res: Response) => {
+  const order = await orderService.cancelOwn(String(req.params.id), req.user!.id, req.body?.reason);
   res.json({ data: presentOrder(order) });
 });

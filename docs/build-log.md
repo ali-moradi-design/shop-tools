@@ -427,3 +427,30 @@ Sentry and analytics off.
 - Env: `SMTP_URL`, `MAIL_FROM`, `ADMIN_ALERT_EMAIL` (optional; `deploy/compose.yaml` passes them).
 - Tests: 7 API tests; 4 E2E (guest checkout and set-password link, forgot password + settings +
   address at checkout, newsletter + unsubscribe, admin emails) with axe.
+
+## Port phase 5: cancellations, returns, shipments
+
+- Customer cancel (`POST /orders/:id/cancel`) before an order ships; staff cancels work the same
+  way. A paid Stripe order is refunded through the payment gateway first (if the refund fails,
+  nothing has changed and staff can retry), then its units go back to the warehouses they were
+  taken from (from the order's allocations; leather-shop put everything back in one place).
+  The cancel email says whether the money went back.
+- Shipments: carrier (DHL, DPD, UPS, GLS, Other) and tracking number when marking an order shipped;
+  the order JSON carries a tracking link, the shipped email too. From the order list, "→ Shipped"
+  opens the order page's form, which asks for both. A printable 4 × 6 in label with a Code 39
+  barcode (`shared/lib/barcode.ts`, print CSS that prints only the label).
+- Returns (`ReturnRequest`, Prisma; refunds only, since tools have options such as kits rather
+  than sizes to swap): within 30 days of shipping, never more units than bought (across earlier
+  returns), the refund is the lines' share of what was paid after discounts; staff move a return
+  requested → approved → received → refunded (or rejected), each step emails the customer, and the
+  refund goes through Stripe. A status change only applies to the status it was read in, so two
+  clicks cannot refund twice. Form rows are keyed by line position, not SKU (leather-shop #38).
+- Schema: `Order.refundId`, `shipCarrier`, `shipTracking`, `shippedAt`, `ReturnRequest`
+  (migration `returns_shipments`).
+- Web: order page shows tracking, "Cancel order", returns and a return form; Admin → Returns with
+  status tabs; the admin order page shows the shipment and refund and links the label.
+- E2E sign-ins now exceed the sign-in limit of 30 per 15 minutes in one run, so the limit is
+  `AUTH_RATE_LIMIT_MAX` (default 30) and CI lifts it, like `RATE_LIMIT_MAX`.
+- Tests: 3 API tests (refund + warehouse restock, shipping + tracking + no cancel after shipping,
+  returns rules and staff refund with emails); barcode unit tests; 2 E2E (ship, label, return,
+  refund; customer cancel with refund) with axe.

@@ -19,6 +19,7 @@ export const orderService = new OrderService(
   discountService,
   unitOfWork,
   notifier,
+  payments.gateway,
 );
 export const cartService = new CartService(cartRepo, productRepo, orderRepo, discountService);
 

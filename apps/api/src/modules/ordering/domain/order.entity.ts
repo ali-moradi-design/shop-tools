@@ -35,6 +35,15 @@ export interface Payment {
   checkoutSessionId?: string;
 }
 
+export const CARRIERS = ['DHL', 'DPD', 'UPS', 'GLS', 'Other'] as const;
+export type Carrier = (typeof CARRIERS)[number];
+
+export interface Shipment {
+  carrier: Carrier;
+  trackingNumber: string;
+  shippedAt: Date;
+}
+
 export interface ShippingAddress {
   fullName: string;
   line1: string;
@@ -63,6 +72,9 @@ export interface Order {
   totalAmount: number;
   status: OrderStatus;
   payment: Payment;
+  shipment?: Shipment;
+  /** Stripe refund of a cancelled paid order. */
+  refundId?: string;
   shippingAddress: ShippingAddress;
   statusHistory: StatusHistory[];
   deletedAt?: Date | null;

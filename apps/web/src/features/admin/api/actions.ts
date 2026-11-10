@@ -6,7 +6,7 @@ import type { Product } from '@/entities/product';
 import { ApiError } from '@/shared/api';
 import { serverApi, serverMutate } from '@/shared/api/server';
 import type { Category } from '@/entities/category';
-import { STATUS_LABEL, type OrderStatus } from '@/entities/order';
+import { CARRIERS, STATUS_LABEL, type OrderStatus, type ReturnStatus } from '@/entities/order';
 import type { ActionResult } from '../model/action-result';
 import { discountFormSchema, type DiscountFormValues } from '../model/discount-form';
 import { issuesToFieldErrors, productFormSchema, toCents, toProductPayload, toSpecs, type ProductFormValues } from '../model/product-form';
@@ -127,14 +127,26 @@ export async function bulkUpdateProducts(ids: string[], action: BulkAction): Pro
   return { status: 'ok', message: `${done} ${done === 1 ? 'product' : 'products'} updated.` };
 }
 
-export async function updateOrderStatus(id: string, status: OrderStatus, note?: string): Promise<ActionResult> {
+export type Shipment = { carrier: (typeof CARRIERS)[number]; trackingNumber: string };
+
+export async function updateOrderStatus(id: string, status: OrderStatus, note?: string, shipment?: Shipment): Promise<ActionResult> {
   try {
-    await serverMutate(`/orders/${encodeURIComponent(id)}/status`, 'PATCH', { status, ...(note ? { note } : {}) });
+    await serverMutate(`/orders/${encodeURIComponent(id)}/status`, 'PATCH', { status, ...(note ? { note } : {}), ...(shipment ? { shipment } : {}) });
   } catch (err) {
     return failure(err, `/admin/orders/${id}`);
   }
   refresh();
   return { status: 'ok', message: `Order moved to ${STATUS_LABEL[status]}.` };
+}
+
+export async function updateReturn(id: string, status: ReturnStatus, note?: string): Promise<ActionResult> {
+  try {
+    await serverMutate(`/returns/${encodeURIComponent(id)}`, 'PATCH', { status, ...(note ? { note } : {}) });
+  } catch (err) {
+    return failure(err, '/admin/returns');
+  }
+  refresh();
+  return { status: 'ok', message: 'Return updated. The customer was emailed.' };
 }
 
 /** Creates a discount code. Fixed amounts and the minimum order come in dollars. */

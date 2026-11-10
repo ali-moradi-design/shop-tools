@@ -63,6 +63,7 @@ model User {
   roles         UserRole[]
   refreshTokens RefreshToken[]
   resetTokens   PasswordResetToken[]
+  returns       ReturnRequest[]
   addresses     Address[]
   orders        Order[]
   reviews       Review[]
@@ -321,6 +322,11 @@ model Order {
   transactionId      String?
   /// the open Stripe Checkout Session of an unpaid order
   checkoutSessionId  String?       @unique
+  /// Stripe refund of a cancelled paid order
+  refundId           String?
+  shipCarrier        String?
+  shipTracking       String?
+  shippedAt          DateTime?
   shippingFullName   String
   shippingLine1      String
   shippingLine2      String?
@@ -334,6 +340,7 @@ model Order {
 
   items   OrderItem[]
   history OrderStatusHistory[]
+  returns ReturnRequest[]
 
   @@index([userId, createdAt])
   /// admin order list: newest first, optionally one status
@@ -494,4 +501,29 @@ model Subscriber {
   createdAt      DateTime  @default(now())
 
   @@index([unsubscribedAt, createdAt])
+}
+
+/// A customer's return of some units of a shipped order; refunded through the payment provider
+model ReturnRequest {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// [{ sku, title, label, quantity, price }]
+  items        Json
+  reason       String   @db.VarChar(40)
+  comment      String?  @db.Text
+  /// requested | approved | rejected | received | refunded
+  status       String   @default("requested") @db.VarChar(20)
+  refundAmount Int      @default(0)
+  refundId     String?
+  /// [{ status, at, note }]
+  history      Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status, createdAt])
 }

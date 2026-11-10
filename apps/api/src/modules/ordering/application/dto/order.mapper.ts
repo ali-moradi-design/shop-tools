@@ -1,4 +1,5 @@
 import type { Order } from '@modules/ordering/domain/order.entity';
+import { trackingUrl } from '@modules/ordering/domain/rules/tracking';
 
 export interface OrderDto {
   id: string;
@@ -11,6 +12,9 @@ export interface OrderDto {
   status: Order['status'];
   /** The Checkout Session id stays internal. */
   payment: Omit<Order['payment'], 'checkoutSessionId'>;
+  shipment?: { carrier: string; trackingNumber: string; shippedAt: Date; url?: string };
+  /** A cancelled paid order whose money went back. */
+  refunded: boolean;
   shippingAddress: Order['shippingAddress'];
   statusHistory: Order['statusHistory'];
   createdAt: Date;
@@ -28,6 +32,8 @@ export function toOrderDto(order: Order): OrderDto {
     totalAmount: order.totalAmount,
     status: order.status,
     payment: (({ checkoutSessionId: _session, ...rest }) => rest)(order.payment),
+    shipment: order.shipment ? { ...order.shipment, url: trackingUrl(order.shipment) } : undefined,
+    refunded: Boolean(order.refundId),
     shippingAddress: order.shippingAddress,
     statusHistory: order.statusHistory,
     createdAt: order.createdAt,
