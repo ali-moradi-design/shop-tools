@@ -107,6 +107,7 @@ export default function AdminProductsPage(props: Props) {
     <div>
       <PageHeader title="Products">
         <Link href="/admin/products/trash" className="text-[14px] text-mute underline underline-offset-4">Trash</Link>
+        <Link href="/admin/products/new" className="btn">+ New product</Link>
       </PageHeader>
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <Products {...props} />
