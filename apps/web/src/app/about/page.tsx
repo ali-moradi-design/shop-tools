@@ -20,6 +20,11 @@ export default function AboutPage() {
         Tick “Compare” on up to four products of one category and see them side by side. The best value in each row
         (highest torque, lowest weight …) is marked.
       </p>
+      <h2 className="heading pt-4 text-[28px]">After the order</h2>
+      <p>
+        Pay with a test card, follow the parcel with its tracking link, cancel before it ships or return tools within 30
+        days, all from your account. Sold out? Ask for an email when it is back.
+      </p>
       <h2 className="heading pt-4 text-[28px]">Stock per warehouse</h2>
       <p>
         Stock is kept per warehouse (Berlin, Hamburg, Munich). An order takes units from the nearest warehouse first and
@@ -27,7 +32,8 @@ export default function AboutPage() {
       </p>
       <p className="panel p-4 text-[14px] leading-7">
         Nothing here is for sale. Product photos belong to their owners and are used only as sample content; names,
-        prices and stock levels are generated, the payment gateway is simulated and the data resets every night.
+        prices and stock levels are generated, checkout runs a Stripe Checkout simulator, emails stay in the admin outbox,
+        the shop is kept out of search engines, and the data resets every night.
       </p>
       <Link href="/categories/drills" className="btn">Start with drills</Link>
     </div>

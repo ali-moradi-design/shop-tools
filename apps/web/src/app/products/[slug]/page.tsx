@@ -9,7 +9,6 @@ import { CompareToggle } from '@/features/compare';
 import { FavoriteButton } from '@/features/favorite';
 import { ReviewForm, ReviewList } from '@/features/reviews';
 import { Details, Gallery, RecentlyViewed, RelatedProducts, ShareButton } from '@/widgets/product-detail';
-import { SITE } from '@/shared/config';
 import { getVariant } from '@/shared/lib/ab/server';
 import { formatMoney } from '@/shared/lib/money';
 import { Stars } from '@/shared/ui';
@@ -34,49 +33,6 @@ async function LiveBuyBox({ product }: { product: Product }) {
   return <BuyBox productId={product.id} title={product.title} price={product.price} variants={variants} warehouses={warehouses} ctaVariant={cta} />;
 }
 
-function JsonLd({ product }: { product: Product }) {
-  const url = `${SITE.url}/products/${product.slug}`;
-  const data = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'Product',
-      name: product.title,
-      image: product.images.map((i) => (i.startsWith('/') ? `${SITE.url}${i}` : i)),
-      description: product.description,
-      sku: product.variants[0]?.sku,
-      mpn: product.model,
-      brand: { '@type': 'Brand', name: product.brand || SITE.name },
-      category: product.categoryName,
-      ...(product.ratingCount > 0 && {
-        aggregateRating: { '@type': 'AggregateRating', ratingValue: product.ratingAvg, reviewCount: product.ratingCount },
-      }),
-      offers: {
-        '@type': 'Offer',
-        url,
-        priceCurrency: product.currency,
-        price: (lowestPrice(product) / 100).toFixed(2),
-        availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      },
-    },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE.url },
-        { '@type': 'ListItem', position: 2, name: product.categoryName, item: `${SITE.url}/categories/${product.category}` },
-        { '@type': 'ListItem', position: 3, name: product.title, item: url },
-      ],
-    },
-  ];
-  return (
-    <script
-      type="application/ld+json"
-      // JSON-LD must be inline; the content is our own catalog data, escaped for </script>.
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, '\\u003c') }}
-    />
-  );
-}
-
 export default async function ProductPage({ params }: Props) {
   const product = await fetchProduct((await params).slug);
   if (!product) notFound();
@@ -87,7 +43,6 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="container-page pb-28">
-      <JsonLd product={product} />
       <nav aria-label="Breadcrumb" className="py-4 font-mono text-[12px] text-mute">
         <Link href="/" className="hover:text-ink">Home</Link> /{' '}
         <Link href={`/categories/${product.category}`} className="hover:text-ink">{product.categoryName}</Link> /{' '}

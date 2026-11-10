@@ -519,3 +519,21 @@ Sentry and analytics off.
   E2E run now uses one worker.
 - Tests: 3 API tests (unique visitors, first variant wins, bad input, p-value); 2 E2E (cookies on
   the first visit, benefits variant, events on the results page with axe).
+
+## Port phase 9: content and staying out of search engines
+
+- The demo stays out of search results: root `metadata.robots` noindex/nofollow, an
+  `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex` header on every web response
+  (`next.config.ts`) and `noindex` on every API response; `sitemap.ts` and the product JSON-LD are
+  gone; `robots.txt` lets search engines crawl (so they see the noindex) but refuses AI and archive
+  crawlers; the API serves its own `robots.txt` with `Disallow: /`.
+- Help is rewritten for the tools shop: shortcuts, a searchable FAQ (`useDeferredValue`, so typing
+  stays responsive) in four sections (orders and payment, shipping and tracking, returns and warranty,
+  specifications and stock) that describes the new flows (Stripe test cards, guest checkout, cancel,
+  tracking, returns, restock emails), and a contact block. Headings on the dark contact band set
+  their own colour (`.heading` sets ink; axe caught this in leather-shop). About mentions the new
+  flows.
+- Sentry and analytics are not added: the decision for this port was to keep them off, and wiring
+  them in now would only add unused dependencies.
+- Tests: E2E for the noindex header and tag, `robots.txt` (web and API) and the missing sitemap, and
+  the FAQ search with axe.

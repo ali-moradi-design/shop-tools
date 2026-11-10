@@ -42,6 +42,8 @@ export const metadata: Metadata = {
   title: { default: `${SITE.name} — Tools with the specs that matter`, template: `%s | ${SITE.name}` },
   description: SITE.description,
   openGraph: { siteName: SITE.name, type: 'website' },
+  // a portfolio demo: never in search results (also an X-Robots-Tag header, see next.config.ts)
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false, noimageindex: true } },
 };
 
 /**
