@@ -31,3 +31,10 @@ export const updateStatusSchema = z.object({
 });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
+
+export const listOrdersQuerySchema = z.object({
+  status: z.enum(ORDER_STATUSES).optional(),
+  q: z.string().max(100).optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(50),
+});

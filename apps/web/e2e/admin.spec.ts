@@ -114,3 +114,51 @@ test('admin product form: create with a photo and options, edit, then trash', as
   await page.getByRole('button', { name: 'Move to trash' }).click();
   await expect(page).toHaveURL(/\/admin\/products$/);
 });
+
+test('admin orders, discounts, customers and reviews pages work and pass axe', async ({ page }) => {
+  await signIn(page, '/admin/orders');
+  const axe = async () => {
+    const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(r.violations, page.url()).toEqual([]);
+  };
+
+  // orders: tabs and search keep each other; the detail page shows history
+  await page.getByRole('navigation', { name: 'Order status' }).getByRole('link', { name: 'Awaiting payment' }).click();
+  await expect(page).toHaveURL(/status=pending_payment/);
+  await axe();
+  const firstOrder = page.getByTestId('admin-order').first();
+  if (await firstOrder.count()) {
+    await firstOrder.getByRole('link').first().click();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Order #');
+    await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+    await axe();
+  }
+
+  // discounts: create, pause, delete
+  const code = `E2E${Date.now().toString(36).toUpperCase()}`;
+  await page.goto('/admin/discounts');
+  await page.getByLabel('Code', { exact: true }).fill(code);
+  await page.getByLabel('Percent', { exact: true }).fill('15');
+  await page.getByRole('button', { name: 'Create code' }).click();
+  await expect(page.getByRole('status')).toContainText(`${code} is live.`);
+  const row = page.getByRole('row').filter({ hasText: code });
+  await expect(row).toContainText('Active');
+  await row.getByRole('button', { name: 'Pause' }).click();
+  await expect(row).toContainText('Paused');
+  await axe();
+  page.once('dialog', (d) => d.accept());
+  await row.getByRole('button', { name: 'Delete' }).click();
+  await expect(row).toHaveCount(0);
+
+  // customers: search in the browser; the admin sees "You" instead of actions on their own row
+  await page.goto('/admin/customers');
+  await page.getByLabel('Search customers').fill('admin@shop-tools');
+  await expect(page.getByTestId('admin-customer')).toHaveCount(1);
+  await expect(page.getByTestId('admin-customer')).toContainText('You');
+  await axe();
+
+  // reviews
+  await page.goto('/admin/reviews');
+  await expect(page.getByTestId('admin-review').first()).toBeVisible();
+  await axe();
+});

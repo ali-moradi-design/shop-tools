@@ -1,5 +1,5 @@
 import { Prisma, type OrderStatus as DbOrderStatus } from '@prisma/client';
-import type { IOrderRepository, OrderStatsFilter } from '@modules/ordering/domain/order.repository';
+import type { IOrderRepository, OrderSearchFilter, OrderStatsFilter } from '@modules/ordering/domain/order.repository';
 import type {
   Order,
   CreateOrderInput,
@@ -44,6 +44,37 @@ export class PrismaOrderRepository implements IOrderRepository {
       include,
     });
     return rows.map(mapOrder);
+  }
+
+  async search(filter: OrderSearchFilter): Promise<{ data: Order[]; total: number }> {
+    const q = filter.q?.trim().replace(/^#/, '');
+    const where: Prisma.OrderWhereInput = {
+      deletedAt: null,
+      ...(filter.userId ? { userId: filter.userId } : {}),
+      ...(filter.status ? { status: filter.status as DbOrderStatus } : {}),
+      ...(q
+        ? {
+            OR: [
+              // the shop shows the last six characters of the id, upper-cased
+              { id: { endsWith: q.toLowerCase().replace(/[\\%_]/g, '\\$&') } },
+              { shippingFullName: { contains: q.replace(/[\\%_]/g, '\\$&') } },
+              { user: { email: { contains: q.replace(/[\\%_]/g, '\\$&') } } },
+            ],
+          }
+        : {}),
+    };
+    const client = getPrisma();
+    const [rows, total] = await Promise.all([
+      client.order.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (filter.page - 1) * filter.limit,
+        take: filter.limit,
+        include,
+      }),
+      client.order.count({ where }),
+    ]);
+    return { data: rows.map(mapOrder), total };
   }
 
   async create(input: CreateOrderInput): Promise<Order> {

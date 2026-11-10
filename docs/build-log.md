@@ -309,3 +309,23 @@ Sentry and analytics off.
 - The `@/shared/api` barrel is not imported from client code (it pulls in a server-only module).
 - Tests: 6 unit tests for the form model; E2E creates a product with a photo and two options,
   puts it on sale, checks the shop page shows the uploaded photo, then trashes it (with axe).
+
+## Port phase 1c: orders, discounts, customers, reviews
+
+- API: `GET /orders` is paged and takes `status` and `q` (the shown order number, the ship-to
+  name or the customer's e-mail; LIKE wildcards are escaped). Customers still see only their own
+  orders. New indexes `Order(status, createdAt)` and `Order(createdAt)` for the admin list
+  (migration `order_list_indexes`, SQL from `prisma migrate diff`). Staff can no longer block
+  themselves or change their own roles (400), as in leather-shop.
+- Orders: status tabs and search (both kept in the URL), a quick status select per row, and an
+  order page with items (and the warehouses they shipped from), customer, address, payment, a
+  status form with a note for the history, and the history itself.
+- Discounts: create (percent or amount, minimum order, max uses, end date), pause/activate,
+  delete; the state (Active, Paused, Expired, Used up) is decided on the server.
+- Customers: search, sort and pages in the browser (the list is short), block/unblock and
+  make/remove admin; your own row shows "You" instead of actions.
+- Reviews: newest first, remove (the API recalculates the product rating).
+- The side menu now lists Discounts, Customers and Reviews.
+- Tests: 5 API tests (paging, status filter, search by number/name/e-mail, wildcards, customers
+  see only their own, note in history, self-lockout, blocked sign-in); E2E walks the four
+  sections with axe on each page.

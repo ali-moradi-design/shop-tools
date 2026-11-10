@@ -10,9 +10,19 @@ export interface OrderStatsFilter {
   paidTo?: Date;
 }
 
+/** One page of orders; `q` matches the end of the order id, the ship-to name or the customer's e-mail. */
+export interface OrderSearchFilter {
+  userId?: string;
+  status?: OrderStatus;
+  q?: string;
+  page: number;
+  limit: number;
+}
+
 export interface IOrderRepository {
   findById(id: string): Promise<Order | null>;
   list(filter: { userId?: string; limit?: number }): Promise<Order[]>;
+  search(filter: OrderSearchFilter): Promise<{ data: Order[]; total: number }>;
   create(input: CreateOrderInput): Promise<Order>;
   save(order: Order): Promise<Order>;
   updateStatus(

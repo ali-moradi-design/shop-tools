@@ -93,6 +93,10 @@ export class UserService {
 
     if (!isOwn && !canUpdateAll) throw new AppError('Forbidden', 403);
     if (isOwn && !canUpdateOwn && !canUpdateAll) throw new AppError('Forbidden', 403);
+    // Staff must not lock themselves out of the admin area.
+    if (isOwn && (body.isActive === false || body.roles !== undefined)) {
+      throw new AppError('You cannot deactivate your own account or change your own roles', 400);
+    }
 
     const updates: {
       name?: string;

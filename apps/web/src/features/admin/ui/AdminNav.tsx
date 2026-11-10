@@ -8,6 +8,9 @@ const LINKS = [
   { segment: null, href: '/admin', label: 'Dashboard' },
   { segment: 'products', href: '/admin/products', label: 'Products' },
   { segment: 'orders', href: '/admin/orders', label: 'Orders' },
+  { segment: 'discounts', href: '/admin/discounts', label: 'Discounts' },
+  { segment: 'customers', href: '/admin/customers', label: 'Customers' },
+  { segment: 'reviews', href: '/admin/reviews', label: 'Reviews' },
 ] as const;
 
 /** Side menu on desktop, a scrolling strip on phones; the current section is marked. */
