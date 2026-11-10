@@ -367,3 +367,31 @@ Sentry and analytics off.
 - Share: the native share sheet on phones, otherwise copies the link.
 - Tests: API test for the per-star counts; E2E for zoom, summary, related, share, recently
   viewed (with axe) and the phone sticky bar.
+
+## Port phase 3: Stripe Checkout with a local simulator
+
+- Replaces the `fake` payment. The API has a `PaymentGateway` port: `StripeGateway` (test keys
+  only; the API refuses to start with a key that is not `sk_test_…`) and, when
+  `STRIPE_SECRET_KEY` is unset, `MockStripeGateway` + `MockCheckout`. The simulator signs a real
+  `checkout.session.completed` event with the Stripe SDK and POSTs it to the shop's own webhook
+  (`http://127.0.0.1:$PORT/...`), so the confirm path is the same as with Stripe.
+- Webhook `POST /payments/stripe/webhook` is mounted before `express.json` with `express.raw`;
+  only a verified event marks an order paid. Retries with the same payment are no-ops; a wrong
+  amount or currency is logged and ignored; an expired session is forgotten. An open session is
+  reused, so two tabs cannot pay twice.
+- `POST /orders/:id/checkout` (owner) returns the session URL; `POST /orders/:id/pay` is now
+  staff-only ("record a payment by hand", method `manual`). Paying still takes the stock warehouse
+  by warehouse in one transaction and records the allocations.
+- Order: `checkoutSessionId` (unique; kept out of the API's order JSON), `paymentMethod` is now
+  written (`stripe`, `manual`, old orders `fake`). Migration `stripe_checkout`.
+- Web: checkout goes straight to the session URL; `/pay/<session id>` is the simulator page in
+  Stripe's look (test cards, decline, insufficient funds); the order page handles
+  `?checkout=success|cancelled` and, when the browser returns before the webhook, re-renders
+  every 2 s until the order is paid ("Confirming your payment…"). "Pay now" starts a new session.
+- Env: `STOREFRONT_URL` (set in `compose.yaml`, `deploy/compose.yaml` and CI; on the server it
+  must be the public address or redirects go to `localhost:3000`), `STRIPE_SECRET_KEY`,
+  `STRIPE_WEBHOOK_SECRET`, `PAYMENT_CURRENCY`.
+- Tests: 5 API tests (simulator with decline, session reuse, warehouse allocation, unsigned and
+  tampered webhooks, retries, wrong amount, staff payment, customers get 403); the older tests
+  record payments as staff. E2E pays through the simulator (decline, then pay) with axe on the
+  simulator page; its muted grey was darkened to pass contrast.

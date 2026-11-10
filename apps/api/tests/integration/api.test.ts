@@ -253,7 +253,7 @@ describe('Toolbench API (integration)', () => {
 
       const paid = await ctx.request
         .post(`/api/v1/orders/${order.id}/pay`)
-        .set(authHeader(token))
+        .set(authHeader(ctx.adminToken))
         .expect(200);
 
       expect(paid.body.data.status).toBe('paid');
@@ -295,12 +295,12 @@ describe('Toolbench API (integration)', () => {
 
       await ctx.request
         .post(`/api/v1/orders/${order1Id}/pay`)
-        .set(authHeader(c1.accessToken))
+        .set(authHeader(ctx.adminToken))
         .expect(200);
 
       const fail = await ctx.request
         .post(`/api/v1/orders/${order2Id}/pay`)
-        .set(authHeader(c2.accessToken))
+        .set(authHeader(ctx.adminToken))
         .expect(409);
 
       expect(fail.body.message).toMatch(/insufficient stock/i);

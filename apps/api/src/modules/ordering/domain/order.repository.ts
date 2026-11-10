@@ -21,6 +21,7 @@ export interface OrderSearchFilter {
 
 export interface IOrderRepository {
   findById(id: string): Promise<Order | null>;
+  findByCheckoutSession(sessionId: string): Promise<Order | null>;
   list(filter: { userId?: string; limit?: number }): Promise<Order[]>;
   search(filter: OrderSearchFilter): Promise<{ data: Order[]; total: number }>;
   create(input: CreateOrderInput): Promise<Order>;

@@ -26,6 +26,8 @@ function pendingOrder(): Order {
   };
 }
 
+const receipt = { method: 'stripe' as const, transactionId: 'pi_1', note: 'Paid with Stripe' };
+
 describe('PayOrderUseCase', () => {
   it('marks order paid and decrements stock', async () => {
     const order = pendingOrder();
@@ -44,7 +46,7 @@ describe('PayOrderUseCase', () => {
       }),
     };
     const uc = new PayOrderUseCase(orders as never, products as never);
-    const paid = await uc.execute('o1', 'u1', false);
+    const paid = await uc.execute('o1', receipt);
     expect(paid.status).toBe('paid');
     expect(products.decrementStock).toHaveBeenCalledWith('b1', 'B1-10', 1);
     expect(orders.recordAllocations).toHaveBeenCalledWith('o1', [
@@ -65,15 +67,22 @@ describe('PayOrderUseCase', () => {
       findById: vi.fn(),
     };
     const uc = new PayOrderUseCase(orders as never, products as never);
-    await expect(uc.execute('o1', 'u1', false)).rejects.toThrow(/Insufficient stock/);
+    await expect(uc.execute('o1', receipt)).rejects.toThrow(/Insufficient stock/);
     expect(products.incrementStock).toHaveBeenCalledWith('b1', 'B1-10', 1, 'BER');
     expect(order.status).toBe('failed');
   });
 
-  it('forbids other users', async () => {
-    const orders = { findById: vi.fn().mockResolvedValue(pendingOrder()), save: vi.fn() };
-    const products = { decrementStock: vi.fn(), incrementStock: vi.fn(), findById: vi.fn() };
+  it('records the receipt and ignores a repeat of the same transaction', async () => {
+    const order = pendingOrder();
+    const orders = { findById: vi.fn().mockResolvedValue(order), save: vi.fn(async (o: Order) => o), recordAllocations: vi.fn() };
+    const products = { decrementStock: vi.fn().mockResolvedValue([{ warehouse: 'BER', quantity: 1 }]), incrementStock: vi.fn(), findById: vi.fn() };
     const uc = new PayOrderUseCase(orders as never, products as never);
-    await expect(uc.execute('o1', 'other', false)).rejects.toBeInstanceOf(DomainError);
+    const paid = await uc.execute('o1', receipt);
+    expect(paid.payment).toMatchObject({ method: 'stripe', status: 'paid', transactionId: 'pi_1' });
+    expect(paid.statusHistory.at(-1)?.note).toBe('Paid with Stripe');
+    await uc.execute('o1', receipt);
+    expect(products.decrementStock).toHaveBeenCalledTimes(1);
+    // a different payment for an order that is already paid is refused
+    await expect(uc.execute('o1', { ...receipt, transactionId: 'pi_2' })).rejects.toBeInstanceOf(DomainError);
   });
 });

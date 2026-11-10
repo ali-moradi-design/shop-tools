@@ -6,7 +6,8 @@ export type DomainErrorCode =
   | 'ILLEGAL_TRANSITION'
   | 'INSUFFICIENT_STOCK'
   | 'INVALID_DISCOUNT'
-  | 'EMPTY_CART';
+  | 'EMPTY_CART'
+  | 'PAYMENT_DECLINED';
 
 /**
  * Domain-layer error (no HTTP status). Mapped to AppError / HTTP in error middleware.

@@ -41,6 +41,8 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is not set}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is not set}
       CORS_ORIGIN: https://shop-tools.ali-moradi-develop.com
+      # where Stripe Checkout (or the simulator) sends the customer back to
+      STOREFRONT_URL: https://shop-tools.ali-moradi-develop.com
       COOKIE_SECURE: "true"
       # one proxy hop in front of the API: the storefront's /api route
       TRUST_PROXY: 1

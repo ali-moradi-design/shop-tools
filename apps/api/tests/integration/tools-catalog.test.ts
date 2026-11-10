@@ -260,7 +260,7 @@ describe('Tools catalog', () => {
         .expect(201);
       const paid = await ctx.request
         .post(`/api/v1/orders/${order.body.data.id}/pay`)
-        .set(authHeader(c.accessToken))
+        .set(authHeader(ctx.adminToken))
         .expect(200);
 
       expect(paid.body.data.items[0].allocations).toEqual([

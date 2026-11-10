@@ -14,8 +14,7 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const pay = asyncHandler(async (req: Request, res: Response) => {
-  const isStaff = req.user!.permissions.includes('orders:update-status');
-  const order = await orderService.pay(String(req.params.id), req.user!.id, isStaff);
+  const order = await orderService.recordPayment(String(req.params.id), req.user!.id);
   res.json({ data: presentOrder(order) });
 });
 

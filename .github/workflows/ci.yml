@@ -88,6 +88,7 @@ jobs:
       JWT_ACCESS_SECRET: ci-access-secret-min-8
       JWT_REFRESH_SECRET: ci-refresh-secret-min-8
       CORS_ORIGIN: http://localhost:3000
+      STOREFRONT_URL: http://localhost:3000
       # development mode: plain-http cookies; the rate limit is lifted for the test run
       NODE_ENV: development
       RATE_LIMIT_MAX: 1000000

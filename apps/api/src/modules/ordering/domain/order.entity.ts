@@ -22,11 +22,17 @@ export interface OrderItem {
   allocations?: { warehouse: string; quantity: number }[];
 }
 
+/** `fake` is the old demo gateway (kept for existing orders); `manual` is staff recording a payment. */
+export const PAYMENT_METHODS = ['fake', 'stripe', 'manual'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
 export interface Payment {
-  method: 'fake';
+  method: PaymentMethod;
   status: 'pending' | 'paid' | 'failed';
   paidAt?: Date;
   transactionId?: string;
+  /** The open Stripe Checkout Session, reused while the customer retries. */
+  checkoutSessionId?: string;
 }
 
 export interface ShippingAddress {

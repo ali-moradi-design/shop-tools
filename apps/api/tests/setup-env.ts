@@ -14,3 +14,7 @@ process.env.CORS_ORIGIN = '*';
 process.env.UPLOAD_DIR = 'uploads';
 process.env.COOKIE_SECURE = 'false';
 process.env.COOKIE_SAME_SITE = 'lax';
+// payments: the local Stripe Checkout simulator with a known signing secret
+process.env.STOREFRONT_URL = 'http://shop.test';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
+delete process.env.STRIPE_SECRET_KEY;

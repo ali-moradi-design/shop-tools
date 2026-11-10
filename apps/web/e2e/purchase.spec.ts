@@ -1,10 +1,11 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 const DEMO = { email: 'demo@shop-tools.local', password: 'Demo123!' };
 const ADMIN = { email: 'admin@shop-tools.local', password: 'Admin123!' };
 
-test('browse → cart → fake payment → order shows its warehouse → order visible in admin', async ({ browser }) => {
-  const shopper = await browser.newPage();
+test('browse → cart → simulated Stripe Checkout → order shows its warehouse → order visible in admin', async ({ browser }) => {
+  const shopper = await (await browser.newContext()).newPage();
 
   // browse a category, keep only what is in stock, open the first product
   await shopper.goto('/categories/drills?instock=1');
@@ -34,18 +35,24 @@ test('browse → cart → fake payment → order shows its warehouse → order v
   await shopper.getByLabel('Postal code').fill('10115');
   await shopper.getByRole('button', { name: 'Continue to payment' }).click();
 
-  // simulated gateway: decline first, then approve
-  await expect(shopper).toHaveURL(/\/pay\//);
-  await shopper.getByLabel('Card number').fill('4000 0000 0000 0002');
-  await shopper.getByRole('button', { name: /^Pay \$/ }).click();
-  await expect(shopper.getByText('Your card was declined')).toBeVisible();
-  await shopper.getByLabel('Card number').fill('4242 4242 4242 4242');
-  await shopper.getByRole('button', { name: /^Pay \$/ }).click();
-  await expect(shopper).toHaveURL(/paid=1/);
-  await expect(shopper.getByTestId('order-status')).toHaveText(/paid/i);
+  // the Stripe Checkout simulator: decline first, then pay; the signed webhook confirms the order
+  await expect(shopper).toHaveURL(/\/pay\/cs_test_mock_/);
+  const main = shopper.locator('#main');
+  await expect(main.getByText('Test mode', { exact: true })).toBeVisible();
+  const axe = await new AxeBuilder({ page: shopper }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations).toEqual([]);
+  await main.getByLabel('Card number').fill('4000 0000 0000 0002');
+  await main.getByRole('button', { name: /^Pay \$/ }).click();
+  await expect(main.getByText('Your card was declined')).toBeVisible();
+  await main.getByLabel('Card number').fill('4242 4242 4242 4242');
+  await main.getByRole('button', { name: /^Pay \$/ }).click();
+  await expect(shopper).toHaveURL(/checkout=success/);
+  // a full page load: React holds streamed parts in a hidden copy for a moment, so look inside <main>
+  await expect(main.getByRole('status').filter({ hasText: 'Your payment went through' })).toBeVisible();
+  await expect(main.getByTestId('order-status')).toHaveText(/paid/i);
   // the paid order remembers which warehouse the units came from
-  await expect(shopper.locator('[data-testid=order-allocations]:visible')).toContainText(/Shipped from/);
-  const orderNo = (await shopper.getByRole('heading', { level: 1 }).innerText()).replace(/^order\s*/i, '');
+  await expect(main.getByTestId('order-allocations').first()).toContainText(/Shipped from/);
+  const orderNo = (await main.getByRole('heading', { level: 1 }).innerText()).replace(/^order\s*/i, '');
 
   // the admin sees the order
   const admin = await (await browser.newContext()).newPage();

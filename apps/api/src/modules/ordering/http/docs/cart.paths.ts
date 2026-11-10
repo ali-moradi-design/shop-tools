@@ -57,7 +57,7 @@ export const cartPaths = {
     post: {
       tags: ['Cart'],
       summary: 'Create an order from the cart (pending payment)',
-      description: 'Prices come from the catalog; the cart is emptied. Pay with POST /orders/{id}/pay.',
+      description: 'Prices come from the catalog; the cart is emptied. Pay with POST /orders/{id}/checkout.',
       security: signedIn,
       requestBody: {
         required: true,

@@ -10,6 +10,7 @@ const CODE_TO_STATUS: Record<string, number> = {
   INSUFFICIENT_STOCK: 409,
   INVALID_DISCOUNT: 400,
   EMPTY_CART: 400,
+  PAYMENT_DECLINED: 402,
 };
 
 export function domainToAppError(err: DomainError): AppError {

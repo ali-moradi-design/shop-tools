@@ -9,7 +9,8 @@ export interface OrderDto {
   discountAmount: number;
   totalAmount: number;
   status: Order['status'];
-  payment: Order['payment'];
+  /** The Checkout Session id stays internal. */
+  payment: Omit<Order['payment'], 'checkoutSessionId'>;
   shippingAddress: Order['shippingAddress'];
   statusHistory: Order['statusHistory'];
   createdAt: Date;
@@ -26,7 +27,7 @@ export function toOrderDto(order: Order): OrderDto {
     discountAmount: order.discountAmount,
     totalAmount: order.totalAmount,
     status: order.status,
-    payment: order.payment,
+    payment: (({ checkoutSessionId: _session, ...rest }) => rest)(order.payment),
     shippingAddress: order.shippingAddress,
     statusHistory: order.statusHistory,
     createdAt: order.createdAt,

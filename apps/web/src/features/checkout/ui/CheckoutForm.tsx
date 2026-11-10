@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import type { Cart } from '@/features/cart';
 import { useCartActions } from '@/features/cart';
 import { clientApi } from '@/shared/api/client';
+import { startPayment } from '../api/startPayment';
 import { formatMoney } from '@/shared/lib/money';
 
 type Quote = Cart & { discountCode?: string; discountAmount: number; total: number };
@@ -47,7 +48,13 @@ export function CheckoutForm({ name }: { name: string }) {
         body: JSON.stringify({ shippingAddress, ...(quote?.discountCode ? { discountCode: quote.discountCode } : {}) }),
       });
       await refresh();
-      router.push(`/pay/${data.id}`);
+      try {
+        // Stripe Checkout (or the local simulator) takes over from here
+        await startPayment(data.id);
+      } catch {
+        // the order exists; its page has a Pay now button to try again
+        router.push(`/account/orders/${data.id}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Checkout failed');
       setBusy(false);
