@@ -235,3 +235,17 @@ What was done in each session, in order. Updated at the end of every step.
 - CI: `ubuntu-latest` moved to 26.04, where Playwright 1.56 cannot install Chromium, so the E2E
   job failed before any test ran. The E2E job is pinned to `ubuntu-24.04` until Playwright is
   upgraded.
+
+## Header fixes on every screen size
+
+- Category bar: inside the 1440px container the 11 categories (about 2000px) were cut off on
+  wide screens. Below `xl` it is one scrolling row as before; from `xl` it is a six-column
+  grid, so every category shows in two tidy rows.
+- Hero: removed the two vertical lines around the image.
+- Mobile header: the search box was squeezed to nothing and the account icon sat on top of it.
+  Search now gets its own row below the logo and icons; the logo drops its tagline and shrinks
+  a little below `sm`; the utility bar shows only "FREE SHIPPING OVER $150".
+- Tablet: the "Account" and "Compare" labels show from `lg` (icons below), the utility bar
+  hides the demo notice below `lg`, and the logo tagline no longer wraps.
+- Checked at 320, 375, 768, 1024, 1280, 1440, 1920 and 2560px: no horizontal page scroll,
+  nothing overlaps.

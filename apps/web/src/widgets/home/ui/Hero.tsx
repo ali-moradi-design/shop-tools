@@ -19,13 +19,13 @@ export function Hero({ productCount, categoryCount }: { productCount: number; ca
             <Link href="/categories/drills" className="btn">Shop drills →</Link>
             <Link href="/compare" className="btn btn-outline">Compare tools</Link>
           </div>
-          <p className="flex gap-6 font-mono text-[12px] text-steel">
+          <p className="flex flex-wrap gap-x-6 gap-y-1 whitespace-nowrap font-mono text-[12px] text-steel">
             <span>▪ {productCount} products</span>
             <span>▪ {categoryCount} categories</span>
             <span>▪ 3 warehouses</span>
           </p>
         </div>
-        <div className="relative -mx-4 min-h-[320px] border-t-2 border-ink bg-white sm:-mx-8 lg:mx-0 lg:border-x-2 lg:border-t-0">
+        <div className="relative -mx-4 min-h-[320px] border-t-2 border-ink bg-white sm:-mx-8 lg:mx-0 lg:border-t-0">
           <Image src="/catalog/dhs780t2-gb.webp" alt="A mitre saw with two batteries" fill priority sizes="(min-width: 1440px) 680px, (min-width: 1024px) 50vw, 100vw" className="object-contain p-6" />
         </div>
       </div>
