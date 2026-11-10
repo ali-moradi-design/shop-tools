@@ -198,4 +198,5 @@ here from the start:
 `deploy-kit` only changes `IMAGE_TAG`; it does not copy `compose.yaml`. Every new env var must
 be added to the server's `compose.yaml` by hand (or copy `deploy/compose.yaml` over it), then
 `docker compose up -d`. At least: `STOREFRONT_URL: https://shop-tools.ali-moradi-develop.com`.
-Migrations run when the API container starts (check the Dockerfile `CMD`).
+Migrations run when the API container starts (the `command` of the `api` service in
+`deploy/compose.yaml` runs `prisma migrate deploy`), so the server copy must keep that line.
