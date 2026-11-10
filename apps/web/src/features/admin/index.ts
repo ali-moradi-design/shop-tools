@@ -5,3 +5,8 @@ export { Pagination } from './ui/Pagination';
 export { ProductForm } from './ui/ProductForm';
 export { ProductsTable, type ProductRow } from './ui/ProductsTable';
 export { TrashTable, type TrashRow } from './ui/TrashTable';
+export { OrdersTable, type OrderRow } from './ui/OrdersTable';
+export { DiscountForm } from './ui/DiscountForm';
+export { DiscountsTable, type DiscountRow } from './ui/DiscountsTable';
+export { CustomersTable, type CustomerRow } from './ui/CustomersTable';
+export { ReviewsTable, type ReviewRow } from './ui/ReviewsTable';

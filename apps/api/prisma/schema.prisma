@@ -329,7 +329,9 @@ model Order {
   history OrderStatusHistory[]
 
   @@index([userId, createdAt])
-  @@index([status])
+  /// admin order list: newest first, optionally one status
+  @@index([status, createdAt])
+  @@index([createdAt])
   @@index([paidAt])
 }
 

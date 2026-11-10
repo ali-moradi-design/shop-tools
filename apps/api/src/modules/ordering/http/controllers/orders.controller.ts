@@ -21,8 +21,9 @@ export const pay = asyncHandler(async (req: Request, res: Response) => {
 
 export const listMine = asyncHandler(async (req: Request, res: Response) => {
   const canReadAll = req.user!.permissions.includes('orders:read');
-  const orders = await orderService.list(req.user!.id, canReadAll);
-  res.json({ data: presentOrders(orders) });
+  // query values were parsed by listOrdersQuerySchema in validate()
+  const result = await orderService.list(req.user!.id, canReadAll, req.query as Parameters<typeof orderService.list>[2]);
+  res.json({ ...result, data: presentOrders(result.data) });
 });
 
 export const getById = asyncHandler(async (req: Request, res: Response) => {
