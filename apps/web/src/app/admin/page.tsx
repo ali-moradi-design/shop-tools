@@ -10,6 +10,14 @@ import { early } from '@/shared/lib/early';
 import { formatMoney } from '@/shared/lib/money';
 import { Skeleton } from '@/shared/ui';
 
+interface Insights {
+  customers: number;
+  returningCustomers: number;
+  returningRate: number;
+  refunds: number;
+  byCategory: { category: string; name: string; revenue: number; units: number }[];
+}
+
 interface Summary {
   users: number;
   products: number;
@@ -48,16 +56,17 @@ async function Dashboard() {
       serverApi<{ data: { totalRevenue: number; orderCount: number; avgOrderValue: number } }>(`/reports/analytics/revenue?${range}`),
       serverApi<{ data: { status: OrderStatus; count: number }[] }>('/reports/analytics/orders-by-status'),
       serverApi<{ data: { _id: string; title: string; quantitySold: number }[] }>(`/reports/analytics/top-products?${range}&limit=6`),
+      serverApi<{ data: Insights }>(`/admin/insights?days=${DAYS}`),
     ]),
   );
   await requireAdmin('/admin');
-  const [{ data: s }, { data: low }, { data: recent }, { data: sales }, { data: period }, { data: byStatus }, { data: top }] = await reads;
+  const [{ data: s }, { data: low }, { data: recent }, { data: sales }, { data: period }, { data: byStatus }, { data: top }, { data: insights }] = await reads;
 
   const tiles = [
     ['Revenue, 30 days', formatMoney(period.totalRevenue), `${formatMoney(s.revenue)} all time`],
     ['Paid orders, 30 days', period.orderCount, `${s.orders} orders in total`],
     ['Average order', formatMoney(Math.round(period.avgOrderValue)), 'last 30 days'],
-    ['Customers', s.users, 'accounts'],
+    ['Returning customers', `${Math.round(insights.returningRate * 100)}%`, `${insights.returningCustomers} of ${insights.customers} buyers, 30 days`],
     ['Low stock', s.lowStock, `of ${s.products} products`],
   ] as const;
 
@@ -89,6 +98,17 @@ async function Dashboard() {
               .sort((a, b) => b.count - a.count)
               .map((r) => ({ label: STATUS_LABEL[r.status] ?? r.status, value: r.count, href: `/admin/orders?status=${r.status}` }))}
           />
+        </section>
+        <section>
+          <h2 className="heading mb-4 text-[20px]">Sales by category, 30 days</h2>
+          {insights.byCategory.length ? (
+            <BarList
+              items={insights.byCategory.map((c) => ({ label: c.name, value: c.revenue, href: `/admin/products?category=${c.category}` }))}
+              format={(n) => formatMoney(n)}
+            />
+          ) : (
+            <p className="text-[14px] text-mute">No sales in the last 30 days.</p>
+          )}
         </section>
         <section>
           <h2 className="heading mb-4 text-[20px]">Best sellers, 30 days</h2>

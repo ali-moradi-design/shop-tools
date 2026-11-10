@@ -19,6 +19,7 @@ import {
   registerEngagementRoutes,
   registerPromotionsRoutes,
   registerReportingRoutes,
+  auditTrail,
   registerMessagingRoutes,
   registerNotifications,
 } from './modules';
@@ -71,6 +72,8 @@ app.use(
 );
 
 const apiV1 = express.Router();
+// records staff writes after the response is sent
+apiV1.use(auditTrail);
 registerIdentityRoutes(apiV1);
 registerCatalogRoutes(apiV1);
 registerOrderingRoutes(apiV1);

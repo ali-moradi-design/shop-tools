@@ -30,11 +30,21 @@ async function purgeOldEmails(): Promise<void> {
   }
 }
 
+/** The activity log keeps one year. */
+async function purgeOldAudit(): Promise<void> {
+  try {
+    await prisma.auditEntry.deleteMany({ where: { at: { lt: new Date(Date.now() - 365 * DAY_MS) } } });
+  } catch (err) {
+    logger.error('audit_purge_failed', { err: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 async function main() {
   await connectDb();
   const daily = () => {
     void purgeGuestCarts();
     void purgeOldEmails();
+    void purgeOldAudit();
   };
   daily();
   setInterval(daily, DAY_MS).unref();

@@ -71,7 +71,9 @@ async function Orders({ searchParams }: Props) {
 export default function AdminOrdersPage(props: Props) {
   return (
     <div>
-      <PageHeader title="Orders" />
+      <PageHeader title="Orders">
+        <a href="/api/v1/admin/export/orders.csv" download className="text-[14px] text-mute underline underline-offset-4">Export CSV</a>
+      </PageHeader>
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <Orders {...props} />
       </Suspense>

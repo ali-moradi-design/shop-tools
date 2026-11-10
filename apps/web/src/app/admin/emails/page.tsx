@@ -42,6 +42,7 @@ async function Emails({ searchParams }: Props) {
       <section className="mt-14">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="heading text-[22px]">Newsletter · {subs.meta.total} subscribers</h2>
+          <a href="/api/v1/admin/export/subscribers.csv" className="text-[13px] underline underline-offset-4" download>Export CSV</a>
         </div>
         <SubscribersTable rows={subs.data} />
       </section>

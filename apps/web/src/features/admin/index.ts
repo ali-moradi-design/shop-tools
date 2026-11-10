@@ -15,3 +15,6 @@ export { BarList } from './ui/BarList';
 export { EmailsTable, SubscribersTable, type EmailRow, type SubscriberRow } from './ui/EmailTables';
 export { ReturnsTable } from './ui/ReturnsTable';
 export { PrintButton } from './ui/PrintButton';
+export { AuditTable, type AuditRow } from './ui/EmailTables';
+export { RolesManager, type RoleRow, type PermissionOption } from './ui/RoleEditor';
+export { ImportProducts } from './ui/ImportProducts';

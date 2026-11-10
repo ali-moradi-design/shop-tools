@@ -228,3 +228,61 @@ export async function deleteReview(id: string): Promise<ActionResult> {
   refresh();
   return { status: 'ok', message: 'Review removed.' };
 }
+
+export interface RoleInput {
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+
+/** Creates (no id) or updates a role; the API protects the built-in roles. */
+export async function saveRole(id: string | undefined, input: RoleInput): Promise<ActionResult> {
+  const name = input.name.trim();
+  if (name.length < 2 || name.length > 50) return { status: 'error', message: 'Use a name of 2–50 characters.' };
+  try {
+    if (id) await serverMutate(`/roles/${encodeURIComponent(id)}`, 'PATCH', { ...input, name });
+    else await serverMutate('/roles', 'POST', { ...input, name });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 409) return { status: 'error', message: 'A role with this name exists.' };
+    return failure(err, '/admin/roles');
+  }
+  refresh();
+  return { status: 'ok', message: id ? 'Role saved.' : `${name} created.` };
+}
+
+export async function deleteRole(id: string): Promise<ActionResult> {
+  try {
+    await serverMutate(`/roles/${encodeURIComponent(id)}`, 'DELETE');
+  } catch (err) {
+    return failure(err, '/admin/roles');
+  }
+  refresh();
+  return { status: 'ok', message: 'Role deleted.' };
+}
+
+export interface ImportReport {
+  created: number;
+  updated: number;
+  errors: { row: number; slug?: string; message: string }[];
+  dryRun: boolean;
+}
+
+/** Checks (dryRun) or applies a product CSV. */
+export async function importProducts(csv: string, dryRun: boolean): Promise<ActionResult & { report?: ImportReport }> {
+  if (!csv.trim()) return { status: 'error', message: 'Choose a CSV file first.' };
+  if (csv.length > 2_000_000) return { status: 'error', message: 'The file is too large (2 MB at most).' };
+  let report: ImportReport;
+  try {
+    report = (await serverMutate<{ data: ImportReport }>('/admin/import/products', 'POST', { csv, dryRun })).data;
+  } catch (err) {
+    return failure(err, '/admin/products/import');
+  }
+  if (!dryRun && report.created + report.updated > 0) refresh();
+  const total = report.created + report.updated;
+  const verb = dryRun ? 'would be' : 'were';
+  return {
+    status: report.errors.length ? 'error' : 'ok',
+    message: `${report.created} new and ${report.updated} existing products ${verb} saved${report.errors.length ? `; ${report.errors.length} rows have problems` : ''}.${dryRun && total ? ' Check the list, then import.' : ''}`,
+    report,
+  };
+}

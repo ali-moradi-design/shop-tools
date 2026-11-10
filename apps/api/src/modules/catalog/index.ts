@@ -25,3 +25,4 @@ export {
 export { productsPaths } from './http/docs/products.paths';
 export { categoriesPaths } from './http/docs/categories.paths';
 export { uploadsPaths } from './http/docs/uploads.paths';
+export { createProductSchema } from './http/validators/products.validation';

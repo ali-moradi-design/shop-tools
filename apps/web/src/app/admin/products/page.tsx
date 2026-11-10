@@ -106,6 +106,8 @@ export default function AdminProductsPage(props: Props) {
   return (
     <div>
       <PageHeader title="Products">
+        <a href="/api/v1/admin/export/products.csv" download className="text-[14px] text-mute underline underline-offset-4">Export CSV</a>
+        <Link href="/admin/products/import" className="text-[14px] text-mute underline underline-offset-4">Import</Link>
         <Link href="/admin/products/trash" className="text-[14px] text-mute underline underline-offset-4">Trash</Link>
         <Link href="/admin/products/new" className="btn">+ New product</Link>
       </PageHeader>
