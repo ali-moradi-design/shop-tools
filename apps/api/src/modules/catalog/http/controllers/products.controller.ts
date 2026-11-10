@@ -53,6 +53,17 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
   res.json({ data: presentProduct(product) });
 });
 
+export const listDeleted = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit } = req.query as unknown as { page: number; limit: number };
+  const result = await productService.listDeleted(page, limit);
+  res.json({ ...result, data: presentProducts(result.data) });
+});
+
+export const restore = asyncHandler(async (req: Request, res: Response) => {
+  const product = await productService.restore(String(req.params.id));
+  res.json({ data: presentProduct(product) });
+});
+
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await productService.remove(String(req.params.id));
   res.json({ message: 'Product soft-deleted' });

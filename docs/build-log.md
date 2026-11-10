@@ -263,3 +263,30 @@ What was done in each session, in order. Updated at the end of every step.
   page, Stripe Checkout with a simulator, email outbox, accounts, returns, catalog extras,
   admin tools, A/B testing, About/Help, no search indexing, review lessons), phase by phase,
   with the source PRs and files, to be carried out in a later session.
+
+## Port phase 1a: admin shell, product list, trash
+
+First part of `docs/port-plan.md` phase 1 (admin panel), ported from leather-shop. Decisions for
+the whole port (asked before starting): new screens use the shop's current look without new
+mockups; every phase is merged on its own; Stripe simulator on, emails only in the admin outbox,
+Sentry and analytics off.
+
+- API: `GET /products/trash` (deleted products, newest first) and `POST /products/:id/restore`,
+  both staff-only (`products:delete`); `maxStock` on `GET /products` for the low-stock filter;
+  `PATCH /products/:id` accepts `compareAtPrice: null` to end a sale. 4 new integration tests.
+- Admin shell: side menu on desktop (yellow bar marks the section), a scrolling strip on phones,
+  page titles in the layout's place, a loading skeleton. Each page starts its API reads before
+  the admin check (`early()`), so they run in parallel.
+- Products: search, category and stock filters (5 or fewer / sold out) and sortable headers, all
+  in the URL; stock per warehouse in each row; multi-select with bulk feature/unfeature, percent
+  sale, end sale and move to trash. A bulk sale changes the base price only: options with their
+  own price (kits, body only) keep it. TanStack Table 9 as in leather-shop.
+- Writes are Server Actions (`features/admin/api/actions.ts`) that call the API with the
+  visitor's cookies; the API checks the permission. Pages are SSR, so `refresh()` is enough (no
+  cache tags). `serverMutate` added next to `serverApi`.
+- Trash page with restore.
+- Found on the way: an `sr-only` header label (absolutely positioned) escaped the table's
+  scroll box and widened the page on phones; the scroll boxes are now `relative`. Success
+  messages use ink instead of green (green failed contrast on the grey background).
+- E2E: filter, sort, bulk feature, axe, delete → trash → restore. Checked at 320, 390, 768, 1024
+  and 1440px: no horizontal page scroll.

@@ -83,7 +83,8 @@ export interface CreateProductInput {
   featuredOrder?: number;
 }
 
-export type UpdateProductInput = Partial<CreateProductInput>;
+/** `compareAtPrice: null` ends a sale. */
+export type UpdateProductInput = Partial<Omit<CreateProductInput, 'compareAtPrice'>> & { compareAtPrice?: number | null };
 
 export const PRODUCT_SORTS = ['featured', 'price', 'title', 'createdAt', 'stock', 'rating'] as const;
 export type ProductSort = (typeof PRODUCT_SORTS)[number];
@@ -99,6 +100,8 @@ export interface ProductListFilter {
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
+  /** Only products with at most this many units in total (admin "low stock"). */
+  maxStock?: number;
   featured?: boolean;
   page?: number;
   limit?: number;

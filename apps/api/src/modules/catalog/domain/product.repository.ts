@@ -24,6 +24,10 @@ export interface IProductRepository {
   create(input: CreateProductInput): Promise<Product>;
   update(id: string, input: UpdateProductInput): Promise<Product | null>;
   softDelete(id: string): Promise<Product | null>;
+  /** Soft-deleted products, most recently deleted first. */
+  listDeleted(page: number, limit: number): Promise<{ data: Product[]; total: number }>;
+  /** Brings a soft-deleted product back; null when there is no deleted product with this id. */
+  restore(id: string): Promise<Product | null>;
   /**
    * Takes `quantity` units of one variant, from the warehouses in dispatch order, as one
    * atomic step. Returns where they came from, or null when there are not enough in total.
