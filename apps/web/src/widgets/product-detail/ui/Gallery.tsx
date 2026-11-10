@@ -11,7 +11,7 @@ export function Gallery({ images, title, badge }: { images: string[]; title: str
   return (
     <div>
       <div className="panel relative h-[420px] bg-white sm:h-[560px]">
-        {current && <Image src={current} alt={title} fill priority sizes="(min-width: 1024px) 50vw, 100vw" className="object-contain p-4 mix-blend-multiply" />}
+        {current && <Image src={current} alt={title} fill preload sizes="(min-width: 1024px) 50vw, 100vw" className="object-contain p-4 mix-blend-multiply" />}
         {badge && <span className="tag tag-accent absolute left-3.5 top-3.5">{badge}</span>}
       </div>
       {images.length > 1 && (

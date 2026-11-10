@@ -1,14 +1,17 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { clientApi } from '@/shared/api/client';
 import type { Cart } from './types';
 
-interface CartContextValue {
+interface CartState {
   cart: Cart | null;
   open: boolean;
   busy: boolean;
   error: string | null;
+}
+
+interface CartActions {
   setOpen: (open: boolean) => void;
   add: (productId: string, sku: string, quantity?: number) => Promise<void>;
   update: (productId: string, sku: string, quantity: number) => Promise<void>;
@@ -16,7 +19,12 @@ interface CartContextValue {
   refresh: () => Promise<void>;
 }
 
-const CartContext = createContext<CartContextValue | null>(null);
+/*
+ * Two contexts: the actions never change, so components that only add to the cart
+ * or refresh it (buy box, sign-in, checkout) do not re-render when the cart changes.
+ */
+const StateContext = createContext<CartState | null>(null);
+const ActionsContext = createContext<CartActions | null>(null);
 
 /** Client cart state; the cart itself lives in the API (guest cookie or account). */
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -25,20 +33,37 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const run = useCallback(async (request: () => Promise<{ data: Cart }>) => {
-    setBusy(true);
-    setError(null);
-    try {
-      setCart((await request()).data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-      throw err;
-    } finally {
-      setBusy(false);
-    }
+  const actions = useMemo<CartActions>(() => {
+    const run = async (request: () => Promise<{ data: Cart }>) => {
+      setBusy(true);
+      setError(null);
+      try {
+        setCart((await request()).data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
+        throw err;
+      } finally {
+        setBusy(false);
+      }
+    };
+    return {
+      setOpen,
+      refresh: () => run(() => clientApi<{ data: Cart }>('/cart')).catch(() => {}),
+      add: async (productId, sku, quantity = 1) => {
+        await run(() => clientApi('/cart/items', { method: 'POST', body: JSON.stringify({ productId, sku, quantity }) }));
+        setOpen(true);
+      },
+      update: (productId, sku, quantity) =>
+        run(() =>
+          clientApi(`/cart/items/${productId}/${encodeURIComponent(sku)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ quantity }),
+          }),
+        ),
+      remove: (productId, sku) =>
+        run(() => clientApi(`/cart/items/${productId}/${encodeURIComponent(sku)}`, { method: 'DELETE' })),
+    };
   }, []);
-
-  const refresh = useCallback(() => run(() => clientApi<{ data: Cart }>('/cart')).catch(() => {}), [run]);
 
   // Load the visitor's cart once (the guest cookie or session decides which).
   useEffect(() => {
@@ -51,38 +76,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const value = useMemo<CartContextValue>(
-    () => ({
-      cart,
-      open,
-      busy,
-      error,
-      setOpen,
-      refresh,
-      add: async (productId, sku, quantity = 1) => {
-        await run(() =>
-          clientApi('/cart/items', { method: 'POST', body: JSON.stringify({ productId, sku, quantity }) }),
-        );
-        setOpen(true);
-      },
-      update: (productId, sku, quantity) =>
-        run(() =>
-          clientApi(`/cart/items/${productId}/${encodeURIComponent(sku)}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ quantity }),
-          }),
-        ),
-      remove: (productId, sku) =>
-        run(() => clientApi(`/cart/items/${productId}/${encodeURIComponent(sku)}`, { method: 'DELETE' })),
-    }),
-    [cart, open, busy, error, refresh, run],
-  );
+  const state = useMemo<CartState>(() => ({ cart, open, busy, error }), [cart, open, busy, error]);
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <ActionsContext.Provider value={actions}>
+      <StateContext.Provider value={state}>{children}</StateContext.Provider>
+    </ActionsContext.Provider>
+  );
 }
 
-export function useCart(): CartContextValue {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart must be used inside <CartProvider>');
+export function useCartState(): CartState {
+  const ctx = useContext(StateContext);
+  if (!ctx) throw new Error('useCartState must be used inside <CartProvider>');
   return ctx;
+}
+
+export function useCartActions(): CartActions {
+  const ctx = useContext(ActionsContext);
+  if (!ctx) throw new Error('useCartActions must be used inside <CartProvider>');
+  return ctx;
+}
+
+/** Both halves, for components that show the cart and change it. */
+export function useCart(): CartState & CartActions {
+  return { ...useCartState(), ...useCartActions() };
 }

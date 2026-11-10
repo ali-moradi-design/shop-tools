@@ -10,3 +10,5 @@ export { DiscountForm } from './ui/DiscountForm';
 export { DiscountsTable, type DiscountRow } from './ui/DiscountsTable';
 export { CustomersTable, type CustomerRow } from './ui/CustomersTable';
 export { ReviewsTable, type ReviewRow } from './ui/ReviewsTable';
+export { RevenueChart, type DayPoint } from './ui/RevenueChart';
+export { BarList } from './ui/BarList';

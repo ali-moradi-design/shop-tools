@@ -329,3 +329,21 @@ Sentry and analytics off.
 - Tests: 5 API tests (paging, status filter, search by number/name/e-mail, wildcards, customers
   see only their own, note in history, self-lockout, blocked sign-in); E2E walks the four
   sections with axe on each page.
+
+## Port phase 1d: dashboard and review lessons
+
+- Dashboard: revenue, paid orders and average order for the last 30 days, customers and low
+  stock; a revenue-per-day column chart (hidden table with the same numbers for screen readers);
+  paid orders by status and best sellers as bar lists; latest orders and running low. All eight
+  reads start together, next to the admin check. Sales by category and returning customers come
+  with the insights in phase 7.
+- The chart from leather-shop had focusable `<rect>`s with an `aria-label` and no role (axe:
+  `aria-prohibited-attr`); the hover targets are now mouse-only and the hidden table serves
+  keyboard and screen-reader users.
+- Review lessons from leather-shop #33–#35: the cart context is split into state and actions,
+  so the buy box, sign-in and checkout (which only add or refresh) no longer re-render on every
+  cart change; `priority` on images became `preload` (deprecated in Next 16). Admin table row
+  links already use `prefetch={false}`, admin pages read in parallel, and the order list and
+  stock sort have indexes.
+- E2E: the dashboard is covered with axe. Streamed parts are briefly held in a hidden copy at the
+  end of `<body>` before React shows them, so these checks look inside `<main>`.

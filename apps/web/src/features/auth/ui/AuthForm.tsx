@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useCart } from '@/features/cart';
+import { useCartActions } from '@/features/cart';
 import { clientApi } from '@/shared/api/client';
 
 export const DEMO = { email: 'demo@shop-tools.local', password: 'Demo123!' };
@@ -22,7 +22,7 @@ export function safeNext(next: string | undefined): string {
 /** Sign in / create account. After success the guest cart is merged into the account. */
 export function AuthForm({ mode, next }: { mode: 'login' | 'register'; next?: string }) {
   const router = useRouter();
-  const { refresh } = useCart();
+  const { refresh } = useCartActions();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const target = safeNext(next);
@@ -115,7 +115,7 @@ export function AuthForm({ mode, next }: { mode: 'login' | 'register'; next?: st
 
 export function SignOutButton() {
   const router = useRouter();
-  const { refresh } = useCart();
+  const { refresh } = useCartActions();
   return (
     <button
       type="button"
