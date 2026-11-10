@@ -543,3 +543,18 @@ model StockAlert {
 
   @@index([productId, sku, notifiedAt])
 }
+
+/// Successful writes by staff, for the admin activity log (kept one year)
+model AuditEntry {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorEmail String
+  method     String   @db.VarChar(10)
+  path       String   @db.VarChar(300)
+  action     String   @db.VarChar(300)
+  status     Int
+  at         DateTime @default(now())
+
+  @@index([at])
+  @@index([actorId, at])
+}

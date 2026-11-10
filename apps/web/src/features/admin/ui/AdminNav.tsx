@@ -13,6 +13,8 @@ const LINKS = [
   { segment: 'customers', href: '/admin/customers', label: 'Customers' },
   { segment: 'reviews', href: '/admin/reviews', label: 'Reviews' },
   { segment: 'emails', href: '/admin/emails', label: 'Emails' },
+  { segment: 'roles', href: '/admin/roles', label: 'Roles' },
+  { segment: 'activity', href: '/admin/activity', label: 'Activity' },
 ] as const;
 
 /** Side menu on desktop, a scrolling strip on phones; the current section is marked. */

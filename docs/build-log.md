@@ -471,3 +471,29 @@ Sentry and analytics off.
 - Migration `stock_alerts`.
 - Tests: 3 API tests (suggestions, alert dedupe and single email, alert from a cancelled order);
   2 E2E (keyboard suggestions with axe, notify-me on a sold-out product).
+
+## Port phase 7: admin tools
+
+- Insights (`GET /admin/insights?days=`, MySQL queries): paid orders and revenue in the period,
+  average order, buyers and how many of them are returning (bought before the period or twice in
+  it), refunds, and revenue and units by category. The dashboard shows a returning-customers tile
+  and "Sales by category".
+- CSV (`shared/csv.ts` from leather-shop: RFC 4180, a BOM for Excel, and text cells starting with
+  `= + - @` get a leading quote so spreadsheets do not run them): exports of products, orders,
+  customers and newsletter subscribers. The product file uses tool columns: `options` as
+  `SKU / Label / own price / BER 4, HAM 2, MUC 0` and `specs` as `key=value`, so it can be edited
+  and imported back. Import checks the file first (dry run, per-row errors), then saves through the
+  product service (so restocked options send back-in-stock emails); products in the trash are
+  refused with a clear message.
+- Activity log: a middleware records successful staff writes after the response, in plain words
+  ("Edited product 3F9A1C", "Set order #… to shipped"); customers' own actions are not logged;
+  entries older than a year are removed by the daily job. `AuditEntry` table (migration `audit_log`).
+- Roles: the API protects the built-in `admin` and `customer` roles (no delete, no rename, the admin
+  role's permissions stay), as in leather-shop. Admin pages: Roles (one editor open at a time,
+  permissions grouped by section), Activity, Products → Import; export links on Products, Orders,
+  Customers and Emails.
+- The insights routes share `/admin` with the dashboard routes, so they authenticate per route
+  instead of for the whole prefix (which would have checked the session twice on dashboard calls).
+- Tests: CSV unit tests (quoting, formula defence, parsing); 5 API tests (insights, export and
+  import round trip with a broken row, exports staff-only, activity log, built-in roles); E2E for
+  roles, activity, import check and the dashboard insights, with axe.

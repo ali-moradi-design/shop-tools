@@ -72,3 +72,32 @@ export function SubscribersTable({ rows }: { rows: SubscriberRow[] }) {
   const table = useTable({ features, columns: subColumns, data: rows, getRowId: (r) => r.id });
   return <DataTable table={table} label="Subscribers" empty="No subscribers yet." />;
 }
+
+export interface AuditRow {
+  id: string;
+  actorEmail: string;
+  action: string;
+  method: string;
+  path: string;
+  at: string;
+}
+
+const auditHelper = createColumnHelper<typeof features, AuditRow>();
+const auditColumns = auditHelper.columns([
+  auditHelper.accessor('at', { header: 'When', cell: ({ getValue }) => <span className="whitespace-nowrap">{dayTime.format(new Date(getValue()))}</span> }),
+  auditHelper.accessor('actorEmail', { header: 'Who' }),
+  auditHelper.accessor('action', {
+    header: 'What',
+    cell: ({ row: { original: a } }) => (
+      <span>
+        {a.action}
+        <span className="block font-mono text-[11px] text-mute">{a.method} {a.path}</span>
+      </span>
+    ),
+  }),
+]);
+
+export function AuditTable({ rows }: { rows: AuditRow[] }) {
+  const table = useTable({ features, columns: auditColumns, data: rows, getRowId: (r) => r.id });
+  return <DataTable table={table} label="Activity" empty="No changes recorded yet." rowTestId="admin-audit" />;
+}

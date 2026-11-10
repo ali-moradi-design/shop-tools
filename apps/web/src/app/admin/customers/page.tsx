@@ -43,6 +43,8 @@ export default function CustomersPage() {
   return (
     <div>
       <PageHeader title="Customers">
+        <a href="/api/v1/admin/export/customers.csv" download className="text-[14px] text-mute underline underline-offset-4">Export CSV</a>
+        <a href="/admin/roles" className="text-[14px] text-mute underline underline-offset-4">Roles</a>
       </PageHeader>
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <Customers />
