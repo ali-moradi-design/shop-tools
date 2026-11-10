@@ -26,7 +26,7 @@ export function Hero({ productCount, categoryCount }: { productCount: number; ca
           </p>
         </div>
         <div className="relative -mx-4 min-h-[320px] border-t-2 border-ink bg-white sm:-mx-8 lg:mx-0 lg:border-t-0">
-          <Image src="/catalog/dhs780t2-gb.webp" alt="A mitre saw with two batteries" fill priority sizes="(min-width: 1440px) 680px, (min-width: 1024px) 50vw, 100vw" className="object-contain p-6" />
+          <Image src="/catalog/dhs780t2-gb.webp" alt="A mitre saw with two batteries" fill preload sizes="(min-width: 1440px) 680px, (min-width: 1024px) 50vw, 100vw" className="object-contain p-6" />
         </div>
       </div>
     </section>

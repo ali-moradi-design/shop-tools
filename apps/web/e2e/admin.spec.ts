@@ -157,6 +157,15 @@ test('admin orders, discounts, customers and reviews pages work and pass axe', a
   await expect(page.getByTestId('admin-customer')).toContainText('You');
   await axe();
 
+  // dashboard: tiles, chart with a data table for screen readers
+  await page.goto('/admin');
+  // scoped to <main>: React holds streamed parts in a hidden copy for a moment before showing them
+  const main = page.locator('#main');
+  await expect(main.getByTestId('kpi-Revenue, 30 days')).toBeVisible();
+  await expect(main.getByRole('img', { name: 'Paid revenue per day, last 30 days' })).toBeVisible();
+  await expect(main.getByRole('table', { name: 'Paid revenue per day' })).toBeAttached();
+  await axe();
+
   // reviews
   await page.goto('/admin/reviews');
   await expect(page.getByTestId('admin-review').first()).toBeVisible();

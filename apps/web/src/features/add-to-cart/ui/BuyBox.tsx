@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { ProductVariant } from '@/entities/product/model/types';
-import { useCart } from '@/features/cart';
+import { useCartActions } from '@/features/cart';
 import { WAREHOUSE_NAMES } from '@/shared/config';
 import { cn } from '@/shared/lib/cn';
 import { formatMoney } from '@/shared/lib/money';
@@ -22,7 +22,8 @@ export function BuyBox({
   /** Every warehouse, in dispatch order (so a warehouse with no stock row still shows up as 0). */
   warehouses: { code: string; name: string }[];
 }) {
-  const { add, busy } = useCart();
+  const { add } = useCartActions();
+  const [adding, setAdding] = useState(false);
   const firstInStock = variants.find((v) => v.stock > 0) ?? variants[0];
   const [sku, setSku] = useState(firstInStock?.sku);
   const [addError, setAddError] = useState<string | null>(null);
@@ -43,9 +44,11 @@ export function BuyBox({
   const onAdd = async () => {
     if (!selected) return;
     setAddError(null);
+    setAdding(true);
     await add(productId, selected.sku).catch((err: unknown) =>
       setAddError(err instanceof Error ? err.message : 'Could not add to cart'),
     );
+    setAdding(false);
   };
 
   return (
@@ -97,7 +100,7 @@ export function BuyBox({
       </div>
 
       {addError && <p role="alert" className="text-[13px] text-danger">{addError}</p>}
-      <button type="button" onClick={onAdd} disabled={busy || soldOut || (selected?.stock ?? 0) === 0} className="btn w-full text-[16px]" data-testid="add-to-cart">
+      <button type="button" onClick={onAdd} disabled={adding || soldOut || (selected?.stock ?? 0) === 0} className="btn w-full text-[16px]" data-testid="add-to-cart">
         {soldOut ? 'Sold out' : (selected?.stock ?? 0) === 0 ? 'This option is sold out' : `Add to cart — ${formatMoney(unit)}`}
       </button>
       <p className="font-mono text-[12px] text-steel">

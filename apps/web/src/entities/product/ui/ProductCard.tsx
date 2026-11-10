@@ -42,7 +42,7 @@ export function ProductCard({
               alt=""
               fill
               sizes="(min-width: 1024px) 25vw, 50vw"
-              priority={priority}
+              preload={priority}
               className="object-contain p-2 mix-blend-multiply"
             />
           )}

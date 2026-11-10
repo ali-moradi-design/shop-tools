@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { Cart } from '@/features/cart';
-import { useCart } from '@/features/cart';
+import { useCartActions } from '@/features/cart';
 import { clientApi } from '@/shared/api/client';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -12,7 +12,7 @@ type Quote = Cart & { discountCode?: string; discountAmount: number; total: numb
 
 export function CheckoutForm({ name }: { name: string }) {
   const router = useRouter();
-  const { refresh } = useCart();
+  const { refresh } = useCartActions();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
