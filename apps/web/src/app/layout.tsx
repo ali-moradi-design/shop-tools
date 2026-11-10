@@ -65,7 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               account={
                 <Link href="/account" aria-label="Account" className="flex items-center gap-1.5">
                   <Icon name="user" width={20} height={20} />
-                  <span className="hidden sm:inline">Account</span>
+                  <span className="hidden lg:inline">Account</span>
                 </Link>
               }
               cart={<CartButton />}

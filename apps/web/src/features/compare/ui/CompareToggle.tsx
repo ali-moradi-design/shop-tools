@@ -32,8 +32,8 @@ export function CompareLink() {
   const { items, href } = useCompare();
   return (
     <Link href={items.length >= 2 ? href : '/compare'} className="flex items-center gap-1.5">
-      <span className="hidden sm:inline">Compare</span>
-      <span className="sm:hidden" aria-hidden>⇄</span>
+      <span className="hidden lg:inline">Compare</span>
+      <span className="lg:hidden" aria-hidden>⇄</span>
       <span className="bg-accent px-1.5 font-mono text-[11px] font-semibold text-accent-ink" data-testid="compare-count" aria-label={`${items.length} in compare`}>
         {items.length}
       </span>

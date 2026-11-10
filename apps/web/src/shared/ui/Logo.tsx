@@ -8,8 +8,8 @@ export function Logo({ className }: { className?: string }) {
         <span className="absolute inset-x-1 top-[9px] h-1 bg-ink" />
       </span>
       <span className="flex flex-col leading-none">
-        <span className="font-display text-[28px] font-bold tracking-[0.08em]">TOOLBENCH</span>
-        <span className="mt-0.5 font-mono text-[9px] tracking-[0.14em] text-mute">SUPPLY CO. — TECH SPECS FIRST</span>
+        <span className="font-display text-[24px] font-bold tracking-[0.08em] sm:text-[28px]">TOOLBENCH</span>
+        <span className="mt-0.5 hidden whitespace-nowrap font-mono text-[9px] tracking-[0.14em] text-mute sm:block">SUPPLY CO. — TECH SPECS FIRST</span>
       </span>
     </span>
   );
