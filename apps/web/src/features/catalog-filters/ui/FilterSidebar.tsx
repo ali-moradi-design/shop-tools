@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import type { ProductFacets, SpecFacet } from '@/entities/product/model/types';
 import { cn } from '@/shared/lib/cn';
 import { formatNumber, fromBase, toBase, type UnitOption } from '@/shared/lib/units';
@@ -165,6 +165,9 @@ function RangeFilter({ spec, value, onCommit }: { spec: SpecFacet; value?: strin
   const [lo, setLo] = useState(parsed.lo ?? min);
   const [hi, setHi] = useState(parsed.hi ?? max);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // drop a commit still waiting when the URL changes ("clear all", back) or the visitor leaves,
+  // or it would bring the old range back
+  useEffect(() => () => clearTimeout(timer.current), [value]);
 
   // follow the URL (back button, "clear all")
   const [seen, setSeen] = useState(value);

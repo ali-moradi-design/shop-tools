@@ -102,8 +102,9 @@ export class PayOrderUseCase {
         });
       }
 
-      for (const item of saved.items) {
-        const product = await this.products.findById(item.product);
+      // once per product: two options of one product must not raise two alerts
+      for (const productId of new Set(saved.items.map((i) => i.product))) {
+        const product = await this.products.findById(productId);
         if (product && isStockLow(product.stock, this.lowStockThreshold)) {
           await domainEvents.publish(
             stockLowEvent({

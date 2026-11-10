@@ -26,14 +26,21 @@ export async function notifyBackInStock(productId: string, skus: string[]): Prom
   const product = await prisma.product.findFirst({ where: { id: productId, deletedAt: null }, select: { title: true, slug: true } });
   if (!product) return 0;
   const alerts = await prisma.stockAlert.findMany({ where: { productId, sku: { in: skus }, notifiedAt: null } });
+  if (!alerts.length) return 0;
+  // one query for the options' labels and stock, not two per waiting person
+  const variants = await prisma.productVariant.findMany({
+    where: { productId, sku: { in: [...new Set(alerts.map((a) => a.sku))] } },
+    select: { sku: true, label: true, stock: { select: { quantity: true } } },
+  });
+  const inStock = new Map(variants.filter((v) => v.stock.some((s) => s.quantity > 0)).map((v) => [v.sku, v.label]));
   let sent = 0;
   for (const a of alerts) {
-    const variant = await prisma.productVariant.findFirst({ where: { productId, sku: a.sku }, select: { label: true } });
-    if (!variant || ((await variantStock(productId, a.sku)) ?? 0) <= 0) continue;
+    const option = inStock.get(a.sku);
+    if (option === undefined) continue;
     // claim first, so two restocks at once cannot send the email twice
     const { count } = await prisma.stockAlert.updateMany({ where: { id: a.id, notifiedAt: null }, data: { notifiedAt: new Date(), openKey: null } });
     if (count === 0) continue;
-    await mailer.send({ to: a.email, template: 'back-in-stock', ...templates.backInStock({ title: product.title, slug: product.slug, option: variant.label }) });
+    await mailer.send({ to: a.email, template: 'back-in-stock', ...templates.backInStock({ title: product.title, slug: product.slug, option }) });
     sent++;
   }
   return sent;

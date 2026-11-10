@@ -570,3 +570,17 @@ Sentry and analytics off.
   atomic).
 - Tests: 2 integration tests that send the same payment three times and the same cancel three times
   in parallel (both failed before the fix).
+
+## Review round 3: leftovers in performance, timers and security
+
+- Range filter: a slider change waits 350 ms before it updates the URL. If the visitor clicked a
+  product or "Clear all filters" in that window, the waiting update still ran and took them back
+  to the old filter. The wait is now dropped when the URL changes or the filter unmounts.
+- Back-in-stock emails looked up the option's label and stock with two queries per waiting person;
+  now one query covers all of them.
+- After a payment, an order with two options of one product raised the low-stock alert twice; it
+  now checks each product once.
+- Checked and left as is: context values are memoised (cart state and actions are split), every
+  listener and interval is cleaned up, the uploads route only serves `products/<file>`, and CSV
+  exports already escape formulas.
+- Tests: API 172, web 23 unit, E2E 34.
