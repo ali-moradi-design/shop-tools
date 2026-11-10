@@ -249,3 +249,10 @@ What was done in each session, in order. Updated at the end of every step.
   hides the demo notice below `lg`, and the logo tagline no longer wraps.
 - Checked at 320, 375, 768, 1024, 1280, 1440, 1920 and 2560px: no horizontal page scroll,
   nothing overlaps.
+
+## Playwright 1.65
+
+- `@playwright/test` 1.56.1 → 1.65.0 (`@axe-core/playwright` 4.14 works with it unchanged).
+  1.65 supports Ubuntu 26.04, so the E2E job is back on `ubuntu-latest` and the
+  `ubuntu-24.04` pin is gone.
+- All 15 E2E tests pass locally against the production build.
