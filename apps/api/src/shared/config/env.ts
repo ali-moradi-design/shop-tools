@@ -31,6 +31,8 @@ const envSchema = z.object({
   TRUST_PROXY: z.coerce.number().int().nonnegative().default(0),
   // requests per visitor IP and 15 minutes (the storefront renders every page on the server and asks the API several times)
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(1000),
+  // sign-in, sign-up, password reset and guest checkout attempts per visitor IP and 15 minutes
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
   UPLOAD_DIR: z.string().default('uploads'),
   COOKIE_SECURE: optionalBool,
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),

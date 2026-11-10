@@ -3,7 +3,7 @@ import { authenticate, requirePermission, requireAnyPermission } from '@modules/
 import { validate } from '@shared/http/middleware/validate';
 import * as ctrl from '../controllers/orders.controller';
 import { startCheckout } from '../controllers/payments.controller';
-import { createOrderSchema, updateStatusSchema, idParamSchema, listOrdersQuerySchema } from '../validators/orders.validation';
+import { createOrderSchema, updateStatusSchema, idParamSchema, listOrdersQuerySchema, cancelOrderSchema } from '../validators/orders.validation';
 
 const router = Router();
 router.use(authenticate);
@@ -14,6 +14,7 @@ router.get('/:id', requireAnyPermission('orders:read', 'orders:read-own'), valid
 router.post('/:id/checkout', requirePermission('orders:create'), validate({ params: idParamSchema }), startCheckout);
 // staff only: customers pay through Stripe, and only Stripe's webhook marks those orders paid
 router.post('/:id/pay', requirePermission('orders:update-status'), validate({ params: idParamSchema }), ctrl.pay);
+router.post('/:id/cancel', requireAnyPermission('orders:read-own', 'orders:read'), validate({ params: idParamSchema, body: cancelOrderSchema }), ctrl.cancelOwn);
 router.patch(
   '/:id/status',
   requirePermission('orders:update-status'),

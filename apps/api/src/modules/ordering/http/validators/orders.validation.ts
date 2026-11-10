@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ORDER_STATUSES } from '@modules/ordering/domain/order.entity';
+import { CARRIERS, ORDER_STATUSES } from '@modules/ordering/domain/order.entity';
 
 export const shippingAddressSchema = z.object({
   fullName: z.string().min(1),
@@ -28,7 +28,11 @@ export const createOrderSchema = z.object({
 export const updateStatusSchema = z.object({
   status: z.enum(ORDER_STATUSES),
   note: z.string().max(500).optional(),
+  /** Carrier and tracking number, when marking an order shipped. */
+  shipment: z.object({ carrier: z.enum(CARRIERS), trackingNumber: z.string().trim().min(4).max(40) }).optional(),
 });
+
+export const cancelOrderSchema = z.object({ reason: z.string().trim().max(300).optional() });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
 

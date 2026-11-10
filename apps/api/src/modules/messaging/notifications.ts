@@ -1,4 +1,6 @@
-import { domainEvents, type DomainEventName, type OrderChangedPayload, type OrderPaidPayload, type StockLowPayload } from '@shared/domain/events';
+import { domainEvents, type DomainEventName, type OrderChangedPayload, type OrderPaidPayload, type ReturnEventPayload, type StockLowPayload } from '@shared/domain/events';
+import { trackingUrl } from '@modules/ordering/domain/rules/tracking';
+import type { Shipment } from '@modules/ordering/domain/order.entity';
 import { env } from '@shared/config/env';
 import { logger } from '@shared/logging/logger';
 import { prisma } from '@shared/infra/prisma/client';
@@ -29,6 +31,14 @@ async function adminEmails(): Promise<string[]> {
   return users.map((u) => u.email);
 }
 
+const RETURN_LABEL: Record<string, string> = {
+  requested: 'received, we will look at it shortly',
+  approved: 'approved: please send the items back',
+  rejected: 'not accepted',
+  received: 'received at our warehouse',
+  refunded: 'refunded',
+};
+
 let registered = false;
 
 /** Customer and staff emails for order and stock events. Safe to call more than once. */
@@ -42,8 +52,15 @@ export function registerNotifications(): void {
   });
 
   safely<OrderChangedPayload>('OrderShipped', async ({ orderId, userId }) => {
+    const [order, to] = await Promise.all([prisma.order.findUnique({ where: { id: orderId } }), emailOf(userId)]);
+    if (!order || !to) return;
+    const s = order.shipCarrier && order.shipTracking ? { carrier: order.shipCarrier as Shipment['carrier'], trackingNumber: order.shipTracking } : undefined;
+    await mailer.send({ to, template: 'order-shipped', ...templates.orderShipped(order, s ? { ...s, url: trackingUrl(s) } : undefined) });
+  });
+
+  safely<ReturnEventPayload>('ReturnUpdated', async ({ orderId, userId, status, note }) => {
     const to = await emailOf(userId);
-    if (to) await mailer.send({ to, template: 'order-shipped', ...templates.orderShipped({ id: orderId }) });
+    if (to) await mailer.send({ to, template: 'return-update', ...templates.returnUpdate({ order: orderId, status: RETURN_LABEL[status] ?? status, note }) });
   });
 
   safely<OrderChangedPayload>('OrderCancelled', async ({ orderId, userId, refunded }) => {

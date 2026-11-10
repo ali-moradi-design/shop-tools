@@ -37,7 +37,7 @@ export interface Order {
   discountAmount: number;
   totalAmount: number;
   status: OrderStatus;
-  payment: { method: 'fake'; status: 'pending' | 'paid' | 'failed'; paidAt?: string; transactionId?: string };
+  payment: { method: 'fake' | 'stripe' | 'manual'; status: 'pending' | 'paid' | 'failed'; paidAt?: string; transactionId?: string };
   shippingAddress: {
     fullName: string;
     line1: string;
@@ -48,6 +48,48 @@ export interface Order {
     country: string;
   };
   statusHistory?: { status: OrderStatus; at: string; note?: string }[];
+  shipment?: { carrier: string; trackingNumber: string; shippedAt: string; url?: string };
+  /** A cancelled paid order whose money went back. */
+  refunded?: boolean;
+  createdAt: string;
+}
+
+export const CARRIERS = ['DHL', 'DPD', 'UPS', 'GLS', 'Other'] as const;
+
+/** Orders can be cancelled until they ship; mirrors the API's canCancel. */
+export const canCancel = (s: OrderStatus) => s === 'pending_payment' || s === 'paid' || s === 'processing';
+
+export const RETURN_WINDOW_DAYS = 30;
+export const RETURN_STATUSES = ['requested', 'approved', 'rejected', 'received', 'refunded'] as const;
+export type ReturnStatus = (typeof RETURN_STATUSES)[number];
+
+export const RETURN_STATUS_LABEL: Record<ReturnStatus, string> = {
+  requested: 'Requested — we will look at it shortly',
+  approved: 'Approved — please send the items back',
+  rejected: 'Not accepted',
+  received: 'Received at our warehouse',
+  refunded: 'Refunded',
+};
+
+export const RETURN_REASONS = [
+  ['not-as-described', 'Not as described'],
+  ['damaged', 'Arrived damaged'],
+  ['defective', 'Does not work'],
+  ['wrong-item', 'Wrong item sent'],
+  ['changed-mind', 'Changed my mind'],
+  ['other', 'Other'],
+] as const;
+
+export interface ReturnRequest {
+  id: string;
+  order: string;
+  items: { sku: string; title: string; label: string; quantity: number; price: number }[];
+  reason: string;
+  comment?: string;
+  status: ReturnStatus;
+  refundAmount: number;
+  refunded: boolean;
+  history: { status: ReturnStatus; at: string; note?: string }[];
   createdAt: string;
 }
 

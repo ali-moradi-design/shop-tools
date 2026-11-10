@@ -148,3 +148,23 @@
 .dual-range input[type='range']::-moz-range-track {
   background: transparent;
 }
+
+/* The shipping label page prints only the 4 × 6 in label. */
+@media print {
+  body:has(.print-area) * {
+    visibility: hidden;
+  }
+  body:has(.print-area) .print-area,
+  body:has(.print-area) .print-area * {
+    visibility: visible;
+  }
+  body:has(.print-area) .print-area {
+    position: fixed;
+    inset: 0 auto auto 0;
+    margin: 0;
+  }
+  @page {
+    size: 4in 6in;
+    margin: 0;
+  }
+}

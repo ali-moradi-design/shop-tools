@@ -1,4 +1,4 @@
-export type DomainEventName = 'OrderPaid' | 'StockLow' | 'OrderShipped' | 'OrderCancelled';
+export type DomainEventName = 'OrderPaid' | 'StockLow' | 'OrderShipped' | 'OrderCancelled' | 'ReturnUpdated';
 
 export interface DomainEvent<T = unknown> {
   name: DomainEventName;
@@ -18,6 +18,14 @@ export interface OrderChangedPayload {
   userId: string;
   /** Cancelled after payment, and the money went back. */
   refunded?: boolean;
+}
+
+export interface ReturnEventPayload {
+  returnId: string;
+  orderId: string;
+  userId: string;
+  status: string;
+  note?: string;
 }
 
 export interface StockLowPayload {
@@ -72,4 +80,8 @@ export function orderShippedEvent(payload: OrderChangedPayload): DomainEvent<Ord
 
 export function orderCancelledEvent(payload: OrderChangedPayload): DomainEvent<OrderChangedPayload> {
   return { name: 'OrderCancelled', occurredAt: new Date(), payload };
+}
+
+export function returnUpdatedEvent(payload: ReturnEventPayload): DomainEvent<ReturnEventPayload> {
+  return { name: 'ReturnUpdated', occurredAt: new Date(), payload };
 }

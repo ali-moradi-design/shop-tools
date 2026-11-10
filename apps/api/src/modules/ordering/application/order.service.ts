@@ -4,6 +4,7 @@ import type {
   Order,
   OrderStatus,
   ShippingAddress,
+  Shipment,
 } from '@modules/ordering/domain/order.entity';
 import type { DiscountService } from '@modules/promotions';
 import type { IUnitOfWork } from '@shared/application/unit-of-work.port';
@@ -19,6 +20,7 @@ import { domainEvents, orderCancelledEvent, orderShippedEvent } from '@shared/do
 import { buildOrderLines } from '@modules/ordering/domain/rules/order.lines';
 import { computeSubtotal, computeOrderTotal } from '@modules/ordering/domain/rules/cart.totals';
 import { PayOrderUseCase, type PaymentReceipt } from './use-cases/pay-order';
+import type { Refunder } from './payments.port';
 
 export class OrderService {
   private readonly payOrder: PayOrderUseCase;
@@ -29,6 +31,8 @@ export class OrderService {
     private readonly discounts?: DiscountService,
     uow?: IUnitOfWork,
     notifications?: INotificationPort,
+    /** Refunds a Stripe payment when a paid order is cancelled. */
+    private readonly refunds?: Refunder,
   ) {
     this.payOrder = new PayOrderUseCase(orders, products, uow, notifications);
   }
@@ -126,7 +130,12 @@ export class OrderService {
     return order;
   }
 
-  async updateStatus(orderId: string, nextStatus: OrderStatus, note?: string): Promise<Order> {
+  async updateStatus(
+    orderId: string,
+    nextStatus: OrderStatus,
+    note?: string,
+    shipment?: Pick<Shipment, 'carrier' | 'trackingNumber'>,
+  ): Promise<Order> {
     const order = await this.orders.findById(orderId);
     if (!order) throw new DomainError('Order not found', 'NOT_FOUND');
 
@@ -136,17 +145,38 @@ export class OrderService {
       throw new DomainError('Cannot cancel order in current status', 'VALIDATION');
     }
 
+    let refunded = false;
     if (nextStatus === 'cancelled' && shouldRestockOnCancel(order.status)) {
-      for (const item of order.items) {
-        await this.products.incrementStock(item.product, item.sku, item.quantity);
+      // money first: if the refund fails nothing has changed and staff can retry
+      if (order.payment.method === 'stripe' && order.payment.transactionId && this.refunds && !order.refundId) {
+        order.refundId = await this.refunds.refund(order.payment.transactionId, order.totalAmount);
+        refunded = true;
       }
+      // units go back to the warehouses they were taken from
+      for (const item of order.items) {
+        const from = item.allocations?.length ? item.allocations : [{ warehouse: undefined, quantity: item.quantity }];
+        for (const a of from) await this.products.incrementStock(item.product, item.sku, a.quantity, a.warehouse);
+      }
+    }
+    if (nextStatus === 'shipped' && shipment) {
+      order.shipment = { carrier: shipment.carrier, trackingNumber: shipment.trackingNumber.trim(), shippedAt: new Date() };
     }
 
     order.status = nextStatus;
-    order.statusHistory.push({ status: nextStatus, at: new Date(), note });
+    const autoNote = refunded ? `Refunded ${order.refundId}` : undefined;
+    order.statusHistory.push({ status: nextStatus, at: new Date(), note: [note, autoNote].filter(Boolean).join(' · ') || undefined });
     const saved = await this.orders.save(order);
     if (nextStatus === 'shipped') await domainEvents.publish(orderShippedEvent({ orderId: saved.id, userId: saved.user }));
-    if (nextStatus === 'cancelled') await domainEvents.publish(orderCancelledEvent({ orderId: saved.id, userId: saved.user }));
+    if (nextStatus === 'cancelled') await domainEvents.publish(orderCancelledEvent({ orderId: saved.id, userId: saved.user, refunded }));
     return saved;
+  }
+
+  /** A customer cancels their own order before it ships (a paid one is refunded). */
+  async cancelOwn(orderId: string, userId: string, reason?: string): Promise<Order> {
+    const order = await this.getById(orderId, userId, false);
+    if (!canCancel(order.status)) {
+      throw new DomainError('This order has shipped and can no longer be cancelled. You can request a return instead.', 'VALIDATION');
+    }
+    return this.updateStatus(order.id, 'cancelled', reason ? `Cancelled by customer: ${reason}` : 'Cancelled by customer');
   }
 }
