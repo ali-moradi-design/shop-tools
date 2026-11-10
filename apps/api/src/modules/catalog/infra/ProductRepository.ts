@@ -200,6 +200,7 @@ function buildWhere(filter: ProductListFilter): Prisma.ProductWhereInput {
   }
   if (filter.inStock === true) where.stock = { gt: 0 };
   else if (filter.inStock === false) where.stock = { lte: 0 };
+  if (filter.maxStock !== undefined) and.push({ stock: { lte: filter.maxStock } });
   if (filter.featured !== undefined) where.featured = filter.featured;
   return where;
 }
@@ -352,6 +353,24 @@ export class PrismaProductRepository implements IProductRepository {
       if (!existing) return null;
       await tx.product.update({ where: { id }, data: { deletedAt: new Date() } });
       return load(tx, id);
+    });
+  }
+
+  async listDeleted(page: number, limit: number): Promise<{ data: Product[]; total: number }> {
+    const { skip } = paginate(page, limit);
+    const where = { deletedAt: { not: null } };
+    const client = getPrisma();
+    const [rows, total] = await Promise.all([
+      client.product.findMany({ where, orderBy: [{ deletedAt: 'desc' }, { id: 'asc' }], skip, take: limit, include: productInclude }),
+      client.product.count({ where }),
+    ]);
+    return { data: rows.map(mapProduct), total };
+  }
+
+  async restore(id: string): Promise<Product | null> {
+    return runInTransaction(async (tx) => {
+      const { count } = await tx.product.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
+      return count ? load(tx, id) : null;
     });
   }
 

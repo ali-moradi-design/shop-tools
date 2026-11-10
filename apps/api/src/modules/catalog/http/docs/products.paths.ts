@@ -24,6 +24,7 @@ export const productsPaths = {
         query('minPrice', { type: 'integer' }, 'Cents'),
         query('maxPrice', { type: 'integer' }, 'Cents'),
         query('inStock', { type: 'boolean' }),
+        query('maxStock', { type: 'integer', minimum: 0 }, 'At most this many units in total (admin low-stock list)'),
         query('featured', { type: 'boolean' }),
         query('page', { type: 'integer', minimum: 1, default: 1 }),
         query('limit', { type: 'integer', minimum: 1, maximum: 100, default: 24 }),
@@ -38,6 +39,25 @@ export const productsPaths = {
       security: signedIn,
       requestBody: { required: true, ...json(ref('ProductInput')) },
       responses: { 201: { description: 'Created', ...data(ref('Product')) }, 400: errors[400], 401: errors[401], 403: errors[403], 409: { description: 'Slug or SKU already used' } },
+    },
+  },
+  '/api/v1/products/trash': {
+    get: {
+      tags: ['Products'],
+      summary: 'Deleted products (admin)',
+      description: 'Soft-deleted products, most recently deleted first. Restore one with POST /products/{id}/restore.',
+      security: signedIn,
+      parameters: [query('page', { type: 'integer', minimum: 1, default: 1 }), query('limit', { type: 'integer', minimum: 1, maximum: 100, default: 30 })],
+      responses: { 200: { description: 'Products', ...paged('Product') }, 401: errors[401], 403: errors[403] },
+    },
+  },
+  '/api/v1/products/{id}/restore': {
+    post: {
+      tags: ['Products'],
+      summary: 'Restore a deleted product (admin)',
+      security: signedIn,
+      parameters: [path('id')],
+      responses: { 200: { description: 'Restored', ...data(ref('Product')) }, 401: errors[401], 403: errors[403], 404: errors[404] },
     },
   },
   '/api/v1/products/featured': {

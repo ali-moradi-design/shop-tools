@@ -2,10 +2,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import type { Product } from '@/entities/product';
-import { AdminNav } from '@/features/admin';
+import { PageHeader } from '@/features/admin';
 import { requireAdmin } from '@/features/auth/server';
 import { serverApi } from '@/shared/api/server';
+import { early } from '@/shared/lib/early';
 import { formatMoney } from '@/shared/lib/money';
+import { Skeleton } from '@/shared/ui';
 
 interface Summary {
   users: number;
@@ -16,11 +18,14 @@ interface Summary {
 }
 
 async function Dashboard() {
+  const reads = early(
+    Promise.all([
+      serverApi<{ data: Summary }>('/admin/dashboard/summary'),
+      serverApi<{ data: Product[] }>('/admin/dashboard/low-stock?threshold=5'),
+    ]),
+  );
   await requireAdmin('/admin');
-  const [{ data: s }, { data: low }] = await Promise.all([
-    serverApi<{ data: Summary }>('/admin/dashboard/summary'),
-    serverApi<{ data: Product[] }>('/admin/dashboard/low-stock?threshold=5'),
-  ]);
+  const [{ data: s }, { data: low }] = await reads;
   const tiles = [
     ['Revenue (paid)', formatMoney(s.revenue)],
     ['Orders', s.orders],
@@ -42,10 +47,10 @@ async function Dashboard() {
       <ul className="divide-y divide-line border-y border-line">
         {low.slice(0, 12).map((p) => (
           <li key={p.id} className="grid grid-cols-[48px_1fr_auto_auto] items-center gap-4 py-3 text-[14px]">
-            <div className="relative h-12 bg-soft">{p.images[0] && <Image src={p.images[0]} alt="" fill sizes="48px" className="object-contain" />}</div>
+            <div className="relative h-12 bg-paper">{p.images[0] && <Image src={p.images[0]} alt="" fill sizes="48px" className="object-contain" />}</div>
             <span>{p.title}</span>
             <span className="text-mute">{p.stock} left</span>
-            <Link href={`/admin/products/${p.id}`} className="link-underline">Restock</Link>
+            <Link href={`/admin/products/${p.id}`} className="link-underline" prefetch={false}>Restock</Link>
           </li>
         ))}
       </ul>
@@ -56,9 +61,8 @@ async function Dashboard() {
 export default function AdminPage() {
   return (
     <>
-      <h1 className="heading mb-6 text-[32px]">Admin</h1>
-      <AdminNav current="dashboard" />
-      <Suspense fallback={<div className="h-64" />}>
+      <PageHeader title="Dashboard" />
+      <Suspense fallback={<Skeleton className="h-64 w-full" />}>
         <Dashboard />
       </Suspense>
     </>

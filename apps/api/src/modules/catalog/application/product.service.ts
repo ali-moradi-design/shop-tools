@@ -139,6 +139,18 @@ export class ProductService {
     return product;
   }
 
+  async listDeleted(page?: number, limit?: number) {
+    const p = paginate(page, limit);
+    const { data, total } = await this.products.listDeleted(p.page, p.limit);
+    return { data, meta: { page: p.page, limit: p.limit, total, pages: Math.ceil(total / p.limit) } };
+  }
+
+  async restore(id: string): Promise<Product> {
+    const product = await this.products.restore(id);
+    if (!product) throw new AppError('Deleted product not found', 404);
+    return product;
+  }
+
   async remove(id: string): Promise<void> {
     const product = await this.products.softDelete(id);
     if (!product) throw new AppError('Product not found', 404);

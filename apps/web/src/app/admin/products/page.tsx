@@ -1,61 +1,116 @@
-import Image from 'next/image';
+import type { Metadata } from 'next';
+import Form from 'next/form';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { fetchCategories } from '@/entities/category';
 import type { Product } from '@/entities/product';
-import { AdminNav } from '@/features/admin';
+import { PageHeader, Pagination, ProductsTable, type ProductRow } from '@/features/admin';
 import { requireAdmin } from '@/features/auth/server';
 import type { ApiPaginated } from '@/shared/api';
 import { serverApi } from '@/shared/api/server';
-import { formatMoney } from '@/shared/lib/money';
+import { early } from '@/shared/lib/early';
+import { Skeleton } from '@/shared/ui';
 
-type Props = { searchParams: Promise<{ q?: string; page?: string }> };
+export const metadata: Metadata = { title: 'Products' };
+
+type Search = { q?: string; page?: string; category?: string; stock?: string; sort?: string; order?: string };
+type Props = { searchParams: Promise<Search> };
+
+const SORTS = ['title', 'price', 'stock', 'createdAt'] as const;
+const STOCK = ['low', 'out'] as const;
+const LOW_STOCK = 5;
+const pick = <T extends string>(list: readonly T[], v?: string) => (list.includes(v as T) ? (v as T) : undefined);
+
+/** Only what the table shows goes to the browser, not whole products. */
+const toRow = (p: Product): ProductRow => ({
+  id: p.id,
+  slug: p.slug,
+  title: p.title,
+  sku: p.variants[0]?.sku,
+  image: p.images[0],
+  category: p.categoryName,
+  price: p.price,
+  compareAtPrice: p.compareAtPrice,
+  stock: p.stock,
+  warehouses: p.warehouses,
+  featured: p.featured,
+});
 
 async function Products({ searchParams }: Props) {
+  const sp = await searchParams;
+  // needed first: only a known category from the URL is passed on
+  const categories = await fetchCategories();
+  const filters = {
+    q: sp.q?.trim().slice(0, 100) || undefined,
+    category: pick(categories.map((c) => c.slug), sp.category),
+    stock: pick(STOCK, sp.stock),
+    sort: pick(SORTS, sp.sort) ?? 'title',
+    order: sp.order === 'desc' ? 'desc' : 'asc',
+  } as const;
+  const page = Math.max(1, Math.floor(Number(sp.page)) || 1);
+  const query: Record<string, string> = { limit: '30', page: String(page), sort: filters.sort, order: filters.order };
+  if (filters.q) query.q = filters.q;
+  if (filters.category) query.category = filters.category;
+  if (filters.stock === 'low') query.maxStock = String(LOW_STOCK);
+  if (filters.stock === 'out') query.inStock = 'false';
+  const qs = new URLSearchParams(query);
+  const list = early(serverApi<ApiPaginated<Product>>(`/products?${qs}`));
   await requireAdmin('/admin/products');
-  const { q = '', page = '1' } = await searchParams;
-  const qs = new URLSearchParams({ limit: '30', page: String(Math.max(1, Number(page) || 1)), sort: 'title', order: 'asc', ...(q && { q }) });
-  const { data, meta } = await serverApi<ApiPaginated<Product>>(`/products?${qs}`);
+  const { data, meta } = await list;
+
+  const select = 'border-2 border-ink bg-paper px-2 py-2 text-[14px]';
   return (
     <>
-      <form className="mb-6 flex max-w-md border-b border-ink" role="search">
-        <label htmlFor="admin-q" className="sr-only">Search products</label>
-        <input id="admin-q" name="q" defaultValue={q} placeholder="Search by name, brand or SKU" className="min-w-0 flex-1 bg-transparent py-2 outline-none" />
-        <button type="submit" className="eyebrow">Search</button>
-      </form>
-      <table className="w-full text-left text-[14px]">
-        <thead className="border-b border-line text-[11px] uppercase tracking-[0.16em] text-mute">
-          <tr><th className="py-3 font-medium" colSpan={2}>Product</th><th className="font-medium">Category</th><th className="font-medium">Price</th><th className="font-medium">Stock (BER · HAM · MUC)</th><th /></tr>
-        </thead>
-        <tbody>
-          {data.map((p) => (
-            <tr key={p.id} className="border-b border-line">
-              <td className="w-14 py-2"><div className="relative h-12 w-12 bg-soft">{p.images[0] && <Image src={p.images[0]} alt="" fill sizes="48px" className="object-contain" />}</div></td>
-              <td>{p.title}</td>
-              <td>{p.categoryName}</td>
-              <td>{formatMoney(p.price)}</td>
-              <td className={p.stock <= 5 ? 'text-danger' : ''}>{p.stock} <span className="font-mono text-[12px] text-mute">({p.warehouses.map((w) => w.quantity).join(' · ')})</span></td>
-              <td className="text-right"><Link className="link-underline" href={`/admin/products/${p.id}`}>Edit</Link></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="mt-6 flex gap-6 text-[14px]">
-        {meta.page > 1 && <Link className="link-underline" href={`/admin/products?${new URLSearchParams({ q, page: String(meta.page - 1) })}`}>Previous</Link>}
-        <span className="text-mute">Page {meta.page} of {meta.pages} · {meta.total} products</span>
-        {meta.page < meta.pages && <Link className="link-underline" href={`/admin/products?${new URLSearchParams({ q, page: String(meta.page + 1) })}`}>Next</Link>}
-      </p>
+      <Form action="/admin/products" className="mb-5 flex flex-wrap items-end gap-3 text-[14px]" role="search">
+        <input type="hidden" name="sort" value={filters.sort} />
+        <input type="hidden" name="order" value={filters.order} />
+        <label className="flex min-w-[220px] flex-1 flex-col gap-1">
+          <span className="text-mute">Search</span>
+          <input name="q" defaultValue={filters.q} placeholder="Name, brand, model or SKU" maxLength={100} className="field" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-mute">Category</span>
+          <select name="category" defaultValue={filters.category ?? ''} className={select}>
+            <option value="">All</option>
+            {categories.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-mute">Stock</span>
+          <select name="stock" defaultValue={filters.stock ?? ''} className={select}>
+            <option value="">Any</option>
+            <option value="low">{LOW_STOCK} or fewer</option>
+            <option value="out">Sold out</option>
+          </select>
+        </label>
+        <button type="submit" className="btn">Filter</button>
+        {(filters.q || filters.category || filters.stock) && (
+          <Link href="/admin/products" className="pb-2.5 text-mute underline underline-offset-4">Clear</Link>
+        )}
+      </Form>
+      {/* a new key on every page or filter change clears the selection */}
+      <ProductsTable key={qs.toString()} rows={data.map(toRow)} />
+      <Pagination
+        path="/admin/products"
+        params={{ q: filters.q, category: filters.category, stock: filters.stock, sort: filters.sort, order: filters.order }}
+        page={meta.page}
+        pages={meta.pages}
+        total={meta.total}
+        noun="products"
+      />
     </>
   );
 }
 
 export default function AdminProductsPage(props: Props) {
   return (
-    <>
-      <h1 className="heading mb-6 text-[32px]">Admin</h1>
-      <AdminNav current="products" />
-      <Suspense fallback={<div className="h-64" />}>
+    <div>
+      <PageHeader title="Products">
+        <Link href="/admin/products/trash" className="text-[14px] text-mute underline underline-offset-4">Trash</Link>
+      </PageHeader>
+      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <Products {...props} />
       </Suspense>
-    </>
+    </div>
   );
 }
