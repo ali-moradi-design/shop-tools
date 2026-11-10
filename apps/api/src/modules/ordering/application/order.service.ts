@@ -152,6 +152,13 @@ export class OrderService {
         order.refundId = await this.refunds.refund(order.payment.transactionId, order.totalAmount);
         refunded = true;
       }
+    }
+    // one request wins the transition; a second click or a parallel admin action stops here,
+    // so stock is not put back twice (the refund above is idempotent at Stripe)
+    if (!(await this.orders.claimStatus(order.id, order.status, nextStatus))) {
+      throw new DomainError('This order was just changed by someone else. Reload and try again.', 'CONFLICT');
+    }
+    if (nextStatus === 'cancelled' && shouldRestockOnCancel(order.status)) {
       // units go back to the warehouses they were taken from; options that were sold out wake their alerts
       const soldOut = new Map<string, Set<string>>();
       for (const productId of new Set(order.items.map((i) => i.product))) {

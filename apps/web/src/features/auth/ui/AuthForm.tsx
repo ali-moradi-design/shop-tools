@@ -13,7 +13,9 @@ export function safeNext(next: string | undefined): string {
   if (!next || !next.startsWith('/') || next.startsWith('//') || next.includes('\\')) return '/account';
   try {
     const url = new URL(next, 'http://local.invalid');
-    return url.origin === 'http://local.invalid' ? url.pathname + url.search + url.hash : '/account';
+    const path = url.pathname + url.search + url.hash;
+    // dot segments can normalise to "//host" ("/.//evil.com"), so check the result too
+    return url.origin === 'http://local.invalid' && !path.startsWith('//') ? path : '/account';
   } catch {
     return '/account';
   }

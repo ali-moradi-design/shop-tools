@@ -157,6 +157,14 @@ export class PrismaOrderRepository implements IOrderRepository {
     });
   }
 
+  async claimStatus(id: string, from: OrderStatus, to: OrderStatus): Promise<boolean> {
+    const { count } = await getPrisma().order.updateMany({
+      where: { id, status: from as DbOrderStatus, deletedAt: null },
+      data: { status: to as DbOrderStatus },
+    });
+    return count === 1;
+  }
+
   async updateStatus(
     id: string,
     status: OrderStatus,

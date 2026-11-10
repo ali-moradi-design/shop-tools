@@ -8,7 +8,7 @@ describe('safeNext (open redirect guard)', () => {
   });
 
   it('rejects other hosts in every disguise', () => {
-    for (const bad of ['https://evil.com', '//evil.com', '/\\evil.com', '\\\\evil.com', 'javascript:alert(1)', undefined, '']) {
+    for (const bad of ['https://evil.com', '//evil.com', '/\\evil.com', '\\\\evil.com', 'javascript:alert(1)', '/.//evil.com', '/a/..//evil.com', '/%2e//evil.com', '/\t/evil.com', undefined, '']) {
       expect(safeNext(bad)).toBe('/account');
     }
   });
