@@ -8,4 +8,6 @@ export interface IReviewRepository {
   softDelete(id: string): Promise<Review | null>;
   /** Average rating and count of the product's live reviews. */
   ratingSummary(productId: string): Promise<{ avg: number; count: number }>;
+  /** How many live reviews gave 1 to 5 stars; index 0 is one star. */
+  starCounts(productId: string): Promise<number[]>;
 }

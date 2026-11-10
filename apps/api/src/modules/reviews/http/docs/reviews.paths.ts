@@ -1,6 +1,21 @@
 import { data, errors, json, path, query, ref, signedIn } from '@shared/http/docs/helpers';
 
 export const reviewsPaths = {
+  '/api/v1/reviews/summary': {
+    get: {
+      tags: ['Reviews'],
+      summary: 'Rating summary of a product',
+      description: 'Average (one decimal), count, and `stars`: how many reviews gave 1 to 5 stars (index 0 is one star).',
+      parameters: [query('product', { type: 'string' }, 'Product id')],
+      responses: {
+        200: {
+          description: 'Summary',
+          ...data({ type: 'object', properties: { avg: { type: 'number' }, count: { type: 'integer' }, stars: { type: 'array', items: { type: 'integer' }, minItems: 5, maxItems: 5 } } }),
+        },
+        400: errors[400],
+      },
+    },
+  },
   '/api/v1/reviews': {
     get: {
       tags: ['Reviews'],

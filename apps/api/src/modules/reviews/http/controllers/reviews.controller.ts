@@ -12,6 +12,11 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   res.json(result);
 });
 
+export const summary = asyncHandler(async (req: Request, res: Response) => {
+  const data = await reviewService.summary(String(req.query.product));
+  res.json({ data });
+});
+
 export const getById = asyncHandler(async (req: Request, res: Response) => {
   const review = await reviewService.getById(String(req.params.id));
   res.json({ data: review });

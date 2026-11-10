@@ -347,3 +347,23 @@ Sentry and analytics off.
   stock sort have indexes.
 - E2E: the dashboard is covered with axe. Streamed parts are briefly held in a hidden copy at the
   end of `<body>` before React shows them, so these checks look inside `<main>`.
+
+## Port phase 2: product page
+
+- Gallery from leather-shop: a scroll-snap strip (swipe on phones, arrows and thumbnails on
+  desktop), and a full-screen view in a native `<dialog>` with zoom where you click. Only the first
+  photo loads up front. With one photo (most demo products) it takes the full width; the leather
+  layout kept an empty 72px thumbnail column.
+- Rating summary: new `GET /reviews/summary?product=` (average, count, reviews per star) and a bar
+  per star above the reviews. The summary and the review list are read in parallel; before, the
+  list read the product first and then the reviews.
+- Sale price shows the saving and the percent; the photo badge shows the percent.
+- "Only N left" under the stock table when the chosen option has 3 or fewer units.
+- Phones: once the add-to-cart button scrolls out of view, a bar with the name, price and an
+  add-to-cart button sticks to the bottom (IntersectionObserver, as in leather-shop).
+- "More <category>": up to 8 other in-stock tools of the category, best rated first.
+- Recently viewed: kept in the visitor's browser only (`localStorage`, read through
+  `useSyncExternalStore`, so the server render and the first client render match).
+- Share: the native share sheet on phones, otherwise copies the link.
+- Tests: API test for the per-star counts; E2E for zoom, summary, related, share, recently
+  viewed (with axe) and the phone sticky bar.

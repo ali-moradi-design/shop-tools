@@ -19,6 +19,12 @@ export class ReviewService {
     };
   }
 
+  /** Average, count and per-star counts for the product page's rating summary. */
+  async summary(productId: string) {
+    const [{ avg, count }, stars] = await Promise.all([this.reviews.ratingSummary(productId), this.reviews.starCounts(productId)]);
+    return { avg, count, stars };
+  }
+
   async getById(id: string) {
     const review = await this.reviews.findById(id, true);
     if (!review) throw new AppError('Review not found', 404);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ProductVariant } from '@/entities/product/model/types';
 import { useCartActions } from '@/features/cart';
 import { WAREHOUSE_NAMES } from '@/shared/config';
@@ -12,11 +12,14 @@ const DISPATCH: Record<string, string> = { BER: 'Same-day dispatch', HAM: 'Next-
 /** Variant (kit) picker, stock per warehouse for the picked variant, and the add-to-cart button. */
 export function BuyBox({
   productId,
+  title,
   price,
   variants,
   warehouses,
 }: {
   productId: string;
+  /** Shown in the phone's sticky bar. */
+  title: string;
   price: number;
   variants: ProductVariant[];
   /** Every warehouse, in dispatch order (so a warehouse with no stock row still shows up as 0). */
@@ -24,6 +27,8 @@ export function BuyBox({
 }) {
   const { add } = useCartActions();
   const [adding, setAdding] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const showBar = useScrolledPast(buttonRef);
   const firstInStock = variants.find((v) => v.stock > 0) ?? variants[0];
   const [sku, setSku] = useState(firstInStock?.sku);
   const [addError, setAddError] = useState<string | null>(null);
@@ -99,15 +104,44 @@ export function BuyBox({
         ))}
       </div>
 
+      {selected && selected.stock > 0 && selected.stock <= 3 && (
+        <p className="font-mono text-[12px] font-semibold"><span className="dot dot-low" aria-hidden />Only {selected.stock} left{variants.length > 1 ? ' of this option' : ''}.</p>
+      )}
       {addError && <p role="alert" className="text-[13px] text-danger">{addError}</p>}
-      <button type="button" onClick={onAdd} disabled={adding || soldOut || (selected?.stock ?? 0) === 0} className="btn w-full text-[16px]" data-testid="add-to-cart">
+      <button ref={buttonRef} type="button" onClick={onAdd} disabled={adding || soldOut || (selected?.stock ?? 0) === 0} className="btn w-full text-[16px]" data-testid="add-to-cart">
         {soldOut ? 'Sold out' : (selected?.stock ?? 0) === 0 ? 'This option is sold out' : `Add to cart — ${formatMoney(unit)}`}
       </button>
       <p className="font-mono text-[12px] text-steel">
         {shipsFrom ? `▪ Ships from ${shipsFrom.name}` : '▪ Back in stock soon'} &nbsp;▪ 30-day returns &nbsp;▪ 2-year warranty
       </p>
+      {showBar && !soldOut && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t-2 border-ink bg-paper px-4 py-3 lg:hidden" data-testid="sticky-buy-bar">
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-[14px] text-ink">{title}</span>
+            <span className="font-mono text-[12px] text-steel">{variants.length > 1 && selected ? `${selected.label} · ` : ''}{formatMoney(unit)}</span>
+          </span>
+          <button type="button" onClick={onAdd} disabled={adding || (selected?.stock ?? 0) === 0} className="btn h-11 shrink-0 px-5 text-[13px]">
+            Add to cart
+          </button>
+        </div>
+      )}
     </div>
   );
+}
+
+/** True once the element has scrolled up out of view (for the phone's sticky add-to-cart bar). */
+function useScrolledPast(ref: React.RefObject<HTMLElement | null>) {
+  const [past, setPast] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // The root reaches far below the screen, so only crossing the top edge counts:
+    // an element below the fold still "intersects", one scrolled above it does not.
+    const io = new IntersectionObserver(([e]) => setPast(!e.isIntersecting), { rootMargin: '0px 0px 100000px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref]);
+  return past;
 }
 
 export function BuyBoxSkeleton() {
