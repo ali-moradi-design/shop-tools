@@ -1,4 +1,5 @@
-import { domainEvents, type DomainEventName, type OrderChangedPayload, type OrderPaidPayload, type ReturnEventPayload, type StockLowPayload } from '@shared/domain/events';
+import { domainEvents, type DomainEventName, type OrderChangedPayload, type OrderPaidPayload, type ReturnEventPayload, type StockLowPayload, type StockRestoredPayload } from '@shared/domain/events';
+import { notifyBackInStock } from '@modules/catalog/extras';
 import { trackingUrl } from '@modules/ordering/domain/rules/tracking';
 import type { Shipment } from '@modules/ordering/domain/order.entity';
 import { env } from '@shared/config/env';
@@ -66,6 +67,10 @@ export function registerNotifications(): void {
   safely<OrderChangedPayload>('OrderCancelled', async ({ orderId, userId, refunded }) => {
     const to = await emailOf(userId);
     if (to) await mailer.send({ to, template: 'order-cancelled', ...templates.orderCancelled({ id: orderId }, Boolean(refunded)) });
+  });
+
+  safely<StockRestoredPayload>('StockRestored', async ({ productId, skus }) => {
+    await notifyBackInStock(productId, skus);
   });
 
   safely<StockLowPayload>('StockLow', async ({ productId, title, stock }) => {

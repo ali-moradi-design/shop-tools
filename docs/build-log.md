@@ -454,3 +454,20 @@ Sentry and analytics off.
 - Tests: 3 API tests (refund + warehouse restock, shipping + tracking + no cancel after shipping,
   returns rules and staff refund with emails); barcode unit tests; 2 E2E (ship, label, return,
   refund; customer cancel with refund) with axe.
+
+## Port phase 6: search suggestions and back-in-stock alerts
+
+- `GET /products/suggest?q=` (mounted before `/products/:id`): up to six products whose title, or
+  a word in it, starts with the text, or whose model or a SKU does; LIKE wildcards escaped; cached
+  60 s by the browser. The header search box is now an ARIA combobox: it waits 180 ms after
+  typing, cancels the request for older text, keeps answers it already has, and supports the
+  arrow keys, Enter and Escape; plain Enter still opens the search page. Options hold no links
+  (axe: `nested-interactive`): a click navigates, keyboard users use Enter in the box.
+- Back in stock: `POST /products/:id/stock-alerts` (signed in or with an email, rate limited) for a
+  sold-out option; one open alert per product, option and address (an `openKey` unique column,
+  since MySQL has no partial unique index). When an option goes from 0 to more units (product
+  edit, and the cancel restock) a `StockRestored` event emails everyone waiting, once (the alert
+  is claimed before the email goes out). The buy box offers the form under the button.
+- Migration `stock_alerts`.
+- Tests: 3 API tests (suggestions, alert dedupe and single email, alert from a cancelled order);
+  2 E2E (keyboard suggestions with axe, notify-me on a sold-out product).

@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import { SearchBox } from './SearchBox';
 import type { ReactNode } from 'react';
 import type { Category } from '@/entities/category';
-import { Icon, Logo } from '@/shared/ui';
+import { Logo } from '@/shared/ui';
 import { CompareLink } from '@/features/compare';
 
 /**
@@ -25,19 +26,7 @@ export function SiteHeader({ cart, account, categories }: { cart: ReactNode; acc
           <Link href="/" aria-label="Toolbench home">
             <Logo />
           </Link>
-          <form action="/search" role="search" className="order-last flex h-[42px] min-w-0 basis-full border-2 border-ink sm:order-none sm:flex-1 sm:basis-auto">
-            <label htmlFor="site-search" className="sr-only">Search tools, SKUs or specs</label>
-            <input
-              id="site-search"
-              name="q"
-              placeholder="Search tools, SKUs or specs — e.g. “18V hammer drill”"
-              className="min-w-0 flex-1 px-3.5 text-[14px] outline-none placeholder:text-mute"
-            />
-            <button type="submit" className="bg-ink px-5 font-mono text-[12px] tracking-[0.08em] text-white hover:text-accent">
-              <span className="sr-only sm:not-sr-only">SEARCH</span>
-              <Icon name="search" width={18} height={18} className="sm:hidden" />
-            </button>
-          </form>
+          <SearchBox />
           <div className="ml-auto flex items-center gap-4 text-[14px] font-medium sm:gap-5">
             {account}
             <CompareLink />
