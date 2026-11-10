@@ -256,3 +256,10 @@ What was done in each session, in order. Updated at the end of every step.
   1.65 supports Ubuntu 26.04, so the E2E job is back on `ubuntu-latest` and the
   `ubuntu-24.04` pin is gone.
 - All 15 E2E tests pass locally against the production build.
+
+## Port plan
+
+- `docs/port-plan.md`: the features built for leather-shop and shop-books (admin panel, product
+  page, Stripe Checkout with a simulator, email outbox, accounts, returns, catalog extras,
+  admin tools, A/B testing, About/Help, no search indexing, review lessons), phase by phase,
+  with the source PRs and files, to be carried out in a later session.
