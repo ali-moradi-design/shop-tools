@@ -1,3 +1,4 @@
+import { domainEvents, stockRestoredEvent } from '@shared/domain/events';
 import type { IProductRepository, ICategoryRepository, IWarehouseRepository } from '../domain/product.repository';
 import {
   parseSpecFilters,
@@ -134,8 +135,15 @@ export class ProductService {
   }
 
   async update(id: string, input: UpdateProductInput): Promise<Product> {
+    const before = input.variants ? await this.products.findById(id) : null;
     const product = await this.products.update(id, input);
     if (!product) throw new AppError('Product not found', 404);
+    // options that were sold out and now have stock: tell whoever asked to be emailed
+    if (before) {
+      const wasOut = new Set(before.variants.filter((v) => v.stock === 0).map((v) => v.sku));
+      const skus = product.variants.filter((v) => v.stock > 0 && wasOut.has(v.sku)).map((v) => v.sku);
+      if (skus.length) await domainEvents.publish(stockRestoredEvent({ productId: product.id, skus }));
+    }
     return product;
   }
 

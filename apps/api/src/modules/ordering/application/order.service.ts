@@ -16,7 +16,7 @@ import {
 } from '@modules/ordering/domain/order.transitions';
 import { DomainError } from '@shared/domain/DomainError';
 import { paginate } from '@shared/pagination';
-import { domainEvents, orderCancelledEvent, orderShippedEvent } from '@shared/domain/events';
+import { domainEvents, orderCancelledEvent, orderShippedEvent, stockRestoredEvent } from '@shared/domain/events';
 import { buildOrderLines } from '@modules/ordering/domain/rules/order.lines';
 import { computeSubtotal, computeOrderTotal } from '@modules/ordering/domain/rules/cart.totals';
 import { PayOrderUseCase, type PaymentReceipt } from './use-cases/pay-order';
@@ -152,10 +152,19 @@ export class OrderService {
         order.refundId = await this.refunds.refund(order.payment.transactionId, order.totalAmount);
         refunded = true;
       }
-      // units go back to the warehouses they were taken from
+      // units go back to the warehouses they were taken from; options that were sold out wake their alerts
+      const soldOut = new Map<string, Set<string>>();
+      for (const productId of new Set(order.items.map((i) => i.product))) {
+        const p = await this.products.findById(productId);
+        soldOut.set(productId, new Set(p?.variants.filter((v) => v.stock === 0).map((v) => v.sku) ?? []));
+      }
       for (const item of order.items) {
         const from = item.allocations?.length ? item.allocations : [{ warehouse: undefined, quantity: item.quantity }];
         for (const a of from) await this.products.incrementStock(item.product, item.sku, a.quantity, a.warehouse);
+      }
+      for (const [productId, skus] of soldOut) {
+        const back = order.items.filter((i) => i.product === productId && skus.has(i.sku)).map((i) => i.sku);
+        if (back.length) await domainEvents.publish(stockRestoredEvent({ productId, skus: back }));
       }
     }
     if (nextStatus === 'shipped' && shipment) {

@@ -6,6 +6,7 @@ import { useCartActions } from '@/features/cart';
 import { WAREHOUSE_NAMES } from '@/shared/config';
 import { cn } from '@/shared/lib/cn';
 import { formatMoney } from '@/shared/lib/money';
+import { NotifyMe } from './NotifyMe';
 
 const DISPATCH: Record<string, string> = { BER: 'Same-day dispatch', HAM: 'Next-day', MUC: 'Next-day' };
 
@@ -111,6 +112,7 @@ export function BuyBox({
       <button ref={buttonRef} type="button" onClick={onAdd} disabled={adding || soldOut || (selected?.stock ?? 0) === 0} className="btn w-full text-[16px]" data-testid="add-to-cart">
         {soldOut ? 'Sold out' : (selected?.stock ?? 0) === 0 ? 'This option is sold out' : `Add to cart — ${formatMoney(unit)}`}
       </button>
+      <NotifyMe key={selected?.sku} productId={productId} soldOut={variants.filter((v) => v.stock === 0)} selected={selected?.sku} />
       <p className="font-mono text-[12px] text-steel">
         {shipsFrom ? `▪ Ships from ${shipsFrom.name}` : '▪ Back in stock soon'} &nbsp;▪ 30-day returns &nbsp;▪ 2-year warranty
       </p>

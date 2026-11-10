@@ -223,12 +223,13 @@ model Product {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  variants   ProductVariant[]
-  specs      ProductSpec[]
-  orderItems OrderItem[]
-  cartItems  CartItem[]
-  reviews    Review[]
-  favorites  Favorite[]
+  variants    ProductVariant[]
+  specs       ProductSpec[]
+  stockAlerts StockAlert[]
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+  reviews     Review[]
+  favorites   Favorite[]
 
   @@index([categoryId, featuredOrder])
   @@index([featured, featuredOrder])
@@ -526,4 +527,19 @@ model ReturnRequest {
   @@index([orderId])
   @@index([userId])
   @@index([status, createdAt])
+}
+
+/// "Email me when this option is back in stock"; notifiedAt is set once the email went out
+model StockAlert {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku        String
+  email      String
+  /// one open alert per product, option and address (MySQL has no partial unique index)
+  openKey    String?   @unique
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([productId, sku, notifiedAt])
 }
