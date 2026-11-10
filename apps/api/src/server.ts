@@ -3,6 +3,7 @@ import { connectDb } from './shared/config/db';
 import { env } from './shared/config/env';
 import { logger } from './shared/logging/logger';
 import { cartRepo } from './modules/ordering';
+import { prisma } from './shared/infra/prisma/client';
 
 const GUEST_CART_TTL_MS = 30 * 24 * 3600 * 1000;
 const DAY_MS = 24 * 3600 * 1000;
@@ -17,10 +18,26 @@ async function purgeGuestCarts(): Promise<void> {
   }
 }
 
+const OUTBOX_TTL_MS = 90 * DAY_MS;
+
+/** The email outbox is a log, not an archive: copies older than 90 days are removed. */
+async function purgeOldEmails(): Promise<void> {
+  try {
+    const { count } = await prisma.emailMessage.deleteMany({ where: { createdAt: { lt: new Date(Date.now() - OUTBOX_TTL_MS) } } });
+    if (count) logger.info('old_emails_purged', { removed: count });
+  } catch (err) {
+    logger.error('email_purge_failed', { err: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 async function main() {
   await connectDb();
-  void purgeGuestCarts();
-  setInterval(() => void purgeGuestCarts(), DAY_MS).unref();
+  const daily = () => {
+    void purgeGuestCarts();
+    void purgeOldEmails();
+  };
+  daily();
+  setInterval(daily, DAY_MS).unref();
   app.listen(env.PORT, () => {
     logger.info('server_started', {
       port: env.PORT,

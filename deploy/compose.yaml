@@ -43,6 +43,9 @@ services:
       CORS_ORIGIN: https://shop-tools.ali-moradi-develop.com
       # where Stripe Checkout (or the simulator) sends the customer back to
       STOREFRONT_URL: https://shop-tools.ali-moradi-develop.com
+      # email: without SMTP_URL every message stays in Admin → Emails (the outbox)
+      SMTP_URL: ${SMTP_URL:-}
+      ADMIN_ALERT_EMAIL: ${ADMIN_ALERT_EMAIL:-}
       COOKIE_SECURE: "true"
       # one proxy hop in front of the API: the storefront's /api route
       TRUST_PROXY: 1

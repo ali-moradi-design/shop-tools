@@ -16,7 +16,7 @@ export function mapUser(row: UserRow, withPassword = false): User {
     id: row.id,
     name: row.name,
     email: row.email,
-    passwordHash: withPassword ? row.passwordHash : undefined,
+    passwordHash: withPassword ? (row.passwordHash ?? undefined) : undefined,
     roles: row.roles.map((r) => r.roleId),
     isActive: row.isActive,
     deletedAt: row.deletedAt,
