@@ -7,6 +7,7 @@ import { WAREHOUSE_NAMES } from '@/shared/config';
 import { cn } from '@/shared/lib/cn';
 import { formatMoney } from '@/shared/lib/money';
 import { NotifyMe } from './NotifyMe';
+import { trackConversion, useExposure } from '@/shared/lib/ab';
 
 const DISPATCH: Record<string, string> = { BER: 'Same-day dispatch', HAM: 'Next-day', MUC: 'Next-day' };
 
@@ -17,6 +18,7 @@ export function BuyBox({
   price,
   variants,
   warehouses,
+  ctaVariant = 'control',
 }: {
   productId: string;
   /** Shown in the phone's sticky bar. */
@@ -25,7 +27,10 @@ export function BuyBox({
   variants: ProductVariant[];
   /** Every warehouse, in dispatch order (so a warehouse with no stock row still shows up as 0). */
   warehouses: { code: string; name: string }[];
+  /** A/B test `pdp-cta`: the promise above the button, or not. */
+  ctaVariant?: 'control' | 'benefits';
 }) {
+  useExposure('pdp-cta', ctaVariant);
   const { add } = useCartActions();
   const [adding, setAdding] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -51,8 +56,9 @@ export function BuyBox({
     if (!selected) return;
     setAddError(null);
     setAdding(true);
-    await add(productId, selected.sku).catch((err: unknown) =>
-      setAddError(err instanceof Error ? err.message : 'Could not add to cart'),
+    await add(productId, selected.sku).then(
+      () => trackConversion('add_to_cart'),
+      (err: unknown) => setAddError(err instanceof Error ? err.message : 'Could not add to cart'),
     );
     setAdding(false);
   };
@@ -109,6 +115,13 @@ export function BuyBox({
         <p className="font-mono text-[12px] font-semibold"><span className="dot dot-low" aria-hidden />Only {selected.stock} left{variants.length > 1 ? ' of this option' : ''}.</p>
       )}
       {addError && <p role="alert" className="text-[13px] text-danger">{addError}</p>}
+      {ctaVariant === 'benefits' && !soldOut && (
+        <ul className="grid grid-cols-3 gap-2 text-center font-mono text-[11px] uppercase leading-tight" aria-label="With every order">
+          <li className="border-2 border-ink bg-paper px-2 py-2">Free shipping over $150</li>
+          <li className="border-2 border-ink bg-paper px-2 py-2">30-day returns</li>
+          <li className="border-2 border-ink bg-paper px-2 py-2">2-year warranty</li>
+        </ul>
+      )}
       <button ref={buttonRef} type="button" onClick={onAdd} disabled={adding || soldOut || (selected?.stock ?? 0) === 0} className="btn w-full text-[16px]" data-testid="add-to-cart">
         {soldOut ? 'Sold out' : (selected?.stock ?? 0) === 0 ? 'This option is sold out' : `Add to cart — ${formatMoney(unit)}`}
       </button>

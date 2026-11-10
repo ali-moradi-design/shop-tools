@@ -8,6 +8,9 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
   fullyParallel: false,
+  // every spec shares one seeded database (the admin spec trashes and restores a product, others buy
+  // from the catalog), so files run one after another instead of racing each other
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {

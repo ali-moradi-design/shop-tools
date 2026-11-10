@@ -10,6 +10,7 @@ import { FavoriteButton } from '@/features/favorite';
 import { ReviewForm, ReviewList } from '@/features/reviews';
 import { Details, Gallery, RecentlyViewed, RelatedProducts, ShareButton } from '@/widgets/product-detail';
 import { SITE } from '@/shared/config';
+import { getVariant } from '@/shared/lib/ab/server';
 import { formatMoney } from '@/shared/lib/money';
 import { Stars } from '@/shared/ui';
 
@@ -28,8 +29,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /** Live stock per variant and warehouse, streamed so the rest of the page is not held back. */
 async function LiveBuyBox({ product }: { product: Product }) {
-  const [variants, warehouses] = await Promise.all([fetchLiveVariants(product.slug), fetchWarehouses()]);
-  return <BuyBox productId={product.id} title={product.title} price={product.price} variants={variants} warehouses={warehouses} />;
+  // the variant cookie is read here, in the part that is per visitor anyway
+  const [variants, warehouses, cta] = await Promise.all([fetchLiveVariants(product.slug), fetchWarehouses(), getVariant('pdp-cta')]);
+  return <BuyBox productId={product.id} title={product.title} price={product.price} variants={variants} warehouses={warehouses} ctaVariant={cta} />;
 }
 
 function JsonLd({ product }: { product: Product }) {

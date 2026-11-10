@@ -558,3 +558,17 @@ model AuditEntry {
   @@index([at])
   @@index([actorId, at])
 }
+
+/// A/B test events: one row per visitor, experiment and event type, so counts are unique visitors
+model ExperimentEvent {
+  id         String   @id @default(cuid())
+  experiment String   @db.VarChar(40)
+  variant    String   @db.VarChar(40)
+  visitor    String   @db.VarChar(64)
+  /// exposure | add_to_cart | purchase
+  type       String   @db.VarChar(20)
+  at         DateTime @default(now())
+
+  @@unique([experiment, visitor, type])
+  @@index([experiment, variant, type])
+}
