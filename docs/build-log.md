@@ -552,3 +552,21 @@ Sentry and analytics off.
 - Measured API calls per page (Next.js merges duplicate requests in one render): product page 7,
   home 3, category 4.
 - Tests: E2E for client navigation through several product pages in a row.
+
+## Review round 2: bugs and races
+
+- Open redirect after sign-in: `safeNext` checked the raw `next`, but dot segments normalise to
+  another host (`/.//evil.com` becomes `//evil.com`). It now checks the normalised path too. Unit
+  test cases added.
+- Paying twice at the same moment (the Stripe webhook and the customer's return, or a retried
+  webhook) took the stock twice. Cancelling twice at the same moment (a double click, or the
+  customer and staff together) put the stock back twice and wrote "cancelled" three times. Each
+  status change now starts with `claimStatus`, one conditional `UPDATE ... WHERE status = <old>`;
+  only the request that wins it touches stock. The losing payment request returns the paid order
+  when it carried the same transaction; a losing cancel gets 409. The refund was already safe
+  (Stripe idempotency key).
+- Checked and left as is: messages are never read from the URL, there is no raw HTML, and a
+  discount code with a use limit can only go one use over in the same race (the count itself is
+  atomic).
+- Tests: 2 integration tests that send the same payment three times and the same cancel three times
+  in parallel (both failed before the fix).

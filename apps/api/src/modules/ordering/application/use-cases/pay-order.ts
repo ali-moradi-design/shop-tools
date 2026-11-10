@@ -54,6 +54,10 @@ export class PayOrderUseCase {
 
     try {
       const saved = await run(async () => {
+        // the webhook and the customer's return can arrive together: only one may take the stock
+        if (!(await this.orders.claimStatus(order.id, 'pending_payment', 'paid'))) {
+          throw new DomainError('Order is not awaiting payment', 'CONFLICT');
+        }
         for (const item of order.items) {
           const allocations = await this.products.decrementStock(item.product, item.sku, item.quantity);
           if (!allocations) {
@@ -114,6 +118,12 @@ export class PayOrderUseCase {
 
       return saved;
     } catch (err) {
+      if (err instanceof DomainError && err.code === 'CONFLICT') {
+        // lost the race: if the winner recorded this same payment, that is success
+        const now = await this.orders.findById(orderId);
+        if (now?.payment.status === 'paid' && now.payment.transactionId === receipt.transactionId) return now;
+        throw err;
+      }
       if (!this.uow) {
         for (const t of taken) {
           await this.products.incrementStock(t.product, t.sku, t.quantity, t.warehouse);

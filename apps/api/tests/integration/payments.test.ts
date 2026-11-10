@@ -133,6 +133,28 @@ describe('Payments (Stripe Checkout simulator)', () => {
     expect((await ctx.request.get(`/api/v1/products/${productId}`).expect(200)).body.data.stock).toBe(3);
   });
 
+  it('takes the stock once when the same payment arrives twice at the same moment', async () => {
+    const { order, customer, productId } = await pendingOrder(4);
+    const start = await ctx.request.post(`/api/v1/orders/${order.id}/checkout`).set(authHeader(customer.accessToken)).expect(200);
+    const sessionId = sessionIdOf(start.body.data.url);
+    const event = completed(sessionId, order.id, order.totalAmount, 'pi_race');
+    const results = await Promise.all([signedEvent(event), signedEvent(event), signedEvent(event)]);
+    expect(results.map((r) => r.status)).toEqual([200, 200, 200]);
+    expect((await ctx.request.get(`/api/v1/products/${productId}`).expect(200)).body.data.stock).toBe(3);
+  });
+
+  it('puts the stock back once when a paid order is cancelled twice at the same moment', async () => {
+    const { order, customer, productId } = await pendingOrder(4);
+    await ctx.request.post(`/api/v1/orders/${order.id}/pay`).set(authHeader(ctx.adminToken)).expect(200);
+    expect((await ctx.request.get(`/api/v1/products/${productId}`).expect(200)).body.data.stock).toBe(3);
+    const auth = authHeader(customer.accessToken);
+    const results = await Promise.all([1, 2, 3].map(() => ctx.request.post(`/api/v1/orders/${order.id}/cancel`).set(auth).send({})));
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    expect((await ctx.request.get(`/api/v1/products/${productId}`).expect(200)).body.data.stock).toBe(4);
+    const history = (await ctx.request.get(`/api/v1/orders/${order.id}`).set(auth).expect(200)).body.data.statusHistory as { status: string }[];
+    expect(history.filter((h) => h.status === 'cancelled')).toHaveLength(1);
+  });
+
   it('staff can record a payment by hand', async () => {
     const { order } = await pendingOrder();
     const res = await ctx.request.post(`/api/v1/orders/${order.id}/pay`).set(authHeader(ctx.adminToken)).expect(200);

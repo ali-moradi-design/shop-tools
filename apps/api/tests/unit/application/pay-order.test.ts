@@ -33,7 +33,7 @@ describe('PayOrderUseCase', () => {
     const order = pendingOrder();
     const orders = {
       findById: vi.fn().mockResolvedValue(order),
-      save: vi.fn(async (o: Order) => o),
+      save: vi.fn(async (o: Order) => o), claimStatus: vi.fn().mockResolvedValue(true),
       recordAllocations: vi.fn(),
     };
     const products = {
@@ -57,7 +57,7 @@ describe('PayOrderUseCase', () => {
   it('puts taken units back in the same warehouses when a later line fails (no unit of work)', async () => {
     const order = pendingOrder();
     order.items.push({ product: 'b2', sku: 'B2-1', label: 'Standard', title: 'T2', price: 500, quantity: 3 });
-    const orders = { findById: vi.fn().mockResolvedValue(order), save: vi.fn(async (o: Order) => o), recordAllocations: vi.fn() };
+    const orders = { findById: vi.fn().mockResolvedValue(order), save: vi.fn(async (o: Order) => o), claimStatus: vi.fn().mockResolvedValue(true), recordAllocations: vi.fn() };
     const products = {
       decrementStock: vi
         .fn()
@@ -74,7 +74,7 @@ describe('PayOrderUseCase', () => {
 
   it('records the receipt and ignores a repeat of the same transaction', async () => {
     const order = pendingOrder();
-    const orders = { findById: vi.fn().mockResolvedValue(order), save: vi.fn(async (o: Order) => o), recordAllocations: vi.fn() };
+    const orders = { findById: vi.fn().mockResolvedValue(order), save: vi.fn(async (o: Order) => o), claimStatus: vi.fn().mockResolvedValue(true), recordAllocations: vi.fn() };
     const products = { decrementStock: vi.fn().mockResolvedValue([{ warehouse: 'BER', quantity: 1 }]), incrementStock: vi.fn(), findById: vi.fn() };
     const uc = new PayOrderUseCase(orders as never, products as never);
     const paid = await uc.execute('o1', receipt);

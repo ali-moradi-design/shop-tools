@@ -26,6 +26,11 @@ export interface IOrderRepository {
   search(filter: OrderSearchFilter): Promise<{ data: Order[]; total: number }>;
   create(input: CreateOrderInput): Promise<Order>;
   save(order: Order): Promise<Order>;
+  /**
+   * Moves the order from `from` to `to` only if it is still in `from` (one atomic write).
+   * False means another request changed it first; callers must not repeat side effects then.
+   */
+  claimStatus(id: string, from: OrderStatus, to: OrderStatus): Promise<boolean>;
   updateStatus(
     id: string,
     status: OrderStatus,
